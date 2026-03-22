@@ -7,13 +7,22 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
   <script>
-    tailwind.config = { theme: { extend: { colors: { brand: '#8B7355', brandDark: '#6A563D', bgLight: '#FAF8F5' }, fontFamily: { sans: ['Cairo', 'sans-serif'] } } } }
+    tailwind.config = { 
+        theme: { 
+            extend: { 
+                colors: { brand: '#8B7355', brandDark: '#6A563D', bgLight: '#FAF8F5' }, 
+                fontFamily: { sans: ['Cairo', 'sans-serif'] }
+            } 
+        } 
+    }
   </script>
   <style>
     body { background-color: #FAF8F5; -webkit-tap-highlight-color: transparent; scroll-behavior: smooth; }
+    /* السلة الجانبية الناعمة */
     #cart-drawer { transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
     .cart-open { transform: translateX(0) !important; }
-    .cart-closed { transform: translateX(-100%) !important; } 
+    .cart-closed { transform: translateX(-100%) !important; } /* في الـ RTL بنسحبها للشمال */
+    /* الانيميشن بتاع الاشعارات */
     @keyframes slideDown { from { transform: translate(-50%, -100%); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
     .toast-animate { animation: slideDown 0.3s ease-out forwards; }
   </style>
@@ -22,18 +31,21 @@
    
    <div id="toast-container" class="fixed top-5 left-1/2 z-[9999] pointer-events-none flex flex-col gap-2"></div>
 
-   <header class="bg-white/90 backdrop-blur-md p-4 sticky top-0 z-40 border-b border-gray-100 flex justify-between items-center shadow-sm">
-       <div class="w-10"></div>
-       <h1 class="text-3xl font-black text-brand tracking-[0.2em] cursor-pointer" onclick="window.scrollTo(0,0)">وَهَج</h1>
+   <header class="bg-white/95 backdrop-blur-md p-3 sticky top-0 z-40 border-b border-gray-100 flex justify-between items-center shadow-sm">
+       <div class="flex items-center gap-3 cursor-pointer" onclick="window.scrollTo(0,0)">
+           <img src="./wahaj.png" alt="شعار وَهَج" class="w-12 h-12 rounded-full object-cover shadow-md border-2 border-brand/20">
+           <h1 class="text-3xl font-black text-brand tracking-[0.1em]">وَهَج</h1>
+       </div>
+
        <button onclick="toggleCart()" class="relative p-2 text-brand hover:text-brandDark transition transform hover:scale-110">
-           <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
+           <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
            <span id="cart-badge" class="absolute top-0 right-0 w-5 h-5 bg-red-500 text-white rounded-full text-[10px] font-bold flex items-center justify-center shadow-md scale-0 transition-transform duration-300">0</span>
        </button>
    </header>
 
    <div class="w-full h-[40vh] relative mb-12 overflow-hidden flex-shrink-0">
        <img src="https://images.unsplash.com/photo-1603006905003-be475563bc59?auto=format&fit=crop&q=80" class="w-full h-full object-cover">
-       <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-black/20 flex flex-col items-center justify-center text-white px-4">
+       <div class="absolute inset-0 bg-gradient-to-t from-black/70 to-black/20 flex flex-col items-center justify-center text-white px-4">
            <h2 class="text-4xl md:text-5xl font-black tracking-widest text-center mb-4">نورٌ يعانق الهدوء</h2>
            <p class="text-lg md:text-xl font-semibold opacity-90 text-center">شموع يدوية الصنع تملأ مساحتك بالفخامة والسكينة</p>
        </div>
@@ -44,27 +56,39 @@
            <h2 class="text-2xl font-bold tracking-widest text-gray-800">مجموعتنا العطرية</h2>
        </div>
        <div id="products-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-           <div class="col-span-full text-center py-20 text-brand font-bold">جاري تحميل الشموع...</div>
-       </div>
+           </div>
    </main>
 
    <div id="cart-overlay" class="fixed inset-0 bg-black/50 z-[60] hidden backdrop-blur-sm transition-opacity" onclick="toggleCart()"></div>
+   
    <div id="cart-drawer" class="fixed top-0 left-0 h-full w-full sm:w-[400px] bg-white z-[70] shadow-2xl flex flex-col cart-closed">
-        <div class="p-5 border-b flex justify-between items-center bg-bgLight">
-            <h2 class="font-black text-xl text-brand tracking-widest flex items-center gap-2">سلة التسوق</h2>
-            <button onclick="toggleCart()" class="text-gray-400 hover:text-red-500 bg-white rounded-full p-1 shadow-sm transition">✕</button>
+        <div class="p-4 border-b flex justify-between items-center bg-bgLight">
+            <div class="flex items-center gap-3">
+                <img src="./wahaj.png" alt="شعار وَهَج" class="w-10 h-10 rounded-full object-cover shadow border border-brand/20">
+                <h2 class="font-black text-xl text-brand tracking-widest">سلة التسوق</h2>
+            </div>
+            <button onclick="toggleCart()" class="text-gray-400 hover:text-red-500 bg-white rounded-full p-1 shadow-sm transition">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
         </div>
+
         <div id="cart-items" class="flex-1 overflow-y-auto p-5 space-y-4 bg-white"></div>
+
         <div class="p-5 border-t bg-bgLight shadow-[0_-10px_15px_-3px_rgba(0,0,0,0.05)]">
             <div class="flex justify-between items-center font-black text-xl mb-4 text-gray-800">
-                <span>الإجمالي:</span><span id="cart-total" class="text-brand text-2xl">0 ج.م</span>
+                <span>الإجمالي:</span>
+                <span id="cart-total" class="text-brand text-2xl">0 ج.م</span>
             </div>
+            
             <div id="checkout-form" class="space-y-3 mb-4 hidden">
                 <input id="cart-name" class="w-full p-3 rounded-xl border border-gray-200 focus:border-brand outline-none" placeholder="الاسم الكريم" required>
-                <input id="cart-phone" type="tel" class="w-full p-3 rounded-xl border border-gray-200 focus:border-brand outline-none" placeholder="رقم الموبايل للتواصل" required>
+                <input id="cart-phone" type="tel" class="w-full p-3 rounded-xl border border-gray-200 focus:border-brand outline-none" placeholder="رقم الموبايل للواتساب" required>
                 <textarea id="cart-address" class="w-full p-3 rounded-xl border border-gray-200 focus:border-brand outline-none h-20 resize-none" placeholder="العنوان بالتفصيل" required></textarea>
             </div>
-            <button id="checkout-btn" onclick="handleCheckoutStep()" class="w-full py-4 bg-brand text-white font-bold text-lg rounded-xl tracking-widest hover:bg-brandDark hover:shadow-lg transform active:scale-95 transition-all">متابعة الطلب ➔</button>
+
+            <button id="checkout-btn" onclick="handleCheckoutStep()" class="w-full py-4 bg-brand text-white font-bold text-lg rounded-xl tracking-widest hover:bg-brandDark transform active:scale-95 transition-all flex justify-center items-center gap-2">
+                متابعة الطلب ➔
+            </button>
         </div>
    </div>
 
