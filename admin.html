@@ -26,29 +26,22 @@
         </header>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            
             <div class="lg:col-span-1">
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 sticky top-8">
                     <h2 class="text-xl font-bold mb-4 border-b pb-2 text-gray-800">➕ إضافة شمعة جديدة</h2>
-                    
                     <div class="space-y-4">
-                        <div><label class="text-xs font-bold text-gray-500">اسم المنتج</label><input id="prod-name" class="w-full p-3 rounded-lg bg-gray-50 border outline-none focus:border-[#8B7355]"></div>
-                        
+                        <input id="prod-name" class="w-full p-3 rounded-lg bg-gray-50 border outline-none focus:border-[#8B7355]" placeholder="اسم المنتج">
                         <div class="flex gap-2">
-                            <div class="flex-1"><label class="text-xs font-bold text-gray-500">السعر (ج.م)</label><input id="prod-price" type="number" class="w-full p-3 rounded-lg bg-gray-50 border outline-none focus:border-[#8B7355]"></div>
-                            <div class="flex-1"><label class="text-xs font-bold text-gray-500">سعر قديم (للخصم)</label><input id="prod-old-price" type="number" class="w-full p-3 rounded-lg bg-red-50 border-red-200 outline-none focus:border-red-400 text-red-600"></div>
+                            <input id="prod-price" type="number" class="w-full p-3 rounded-lg bg-gray-50 border outline-none focus:border-[#8B7355]" placeholder="السعر">
+                            <input id="prod-old-price" type="number" class="w-full p-3 rounded-lg bg-red-50 border-red-200 outline-none focus:border-red-400 text-red-600" placeholder="سعر قديم">
                         </div>
-
-                        <div><label class="text-xs font-bold text-gray-500">وصف تشويقي للرائحة</label><textarea id="prod-desc" class="w-full p-3 rounded-lg bg-gray-50 border outline-none focus:border-[#8B7355] h-20" placeholder="مثال: رائحة اللافندر المهدئة للاسترخاء المسائي..."></textarea></div>
+                        <textarea id="prod-desc" class="w-full p-3 rounded-lg bg-gray-50 border outline-none focus:border-[#8B7355] h-20" placeholder="وصف الرائحة..."></textarea>
                         
-                        <div>
-                            <label class="text-xs font-bold text-gray-500 block mb-1">صورة المنتج</label>
-                            <div class="border-2 border-dashed border-[#8B7355] bg-orange-50/30 p-6 rounded-xl text-center cursor-pointer hover:bg-orange-50 transition" onclick="document.getElementById('img-file').click()">
-                                <input type="file" id="img-file" hidden onchange="window.handleImg(this)">
-                                <span class="text-[#8B7355] font-bold text-sm">اضغط لاختيار صورة 📷</span>
-                            </div>
-                            <div id="preview-area" class="mt-2 rounded-xl overflow-hidden shadow-sm hidden"></div>
+                        <div class="border-2 border-dashed border-[#8B7355] bg-orange-50/30 p-6 rounded-xl text-center cursor-pointer hover:bg-orange-50 transition" onclick="document.getElementById('img-file').click()">
+                            <input type="file" id="img-file" hidden onchange="window.handleImg(this)">
+                            <span class="text-[#8B7355] font-bold text-sm">اضغط لاختيار صورة 📷</span>
                         </div>
+                        <div id="preview-area" class="mt-2 rounded-xl overflow-hidden shadow-sm hidden"></div>
 
                         <button onclick="window.uploadProduct()" id="upload-btn" class="w-full bg-[#8B7355] text-white py-4 rounded-xl font-black text-lg shadow-lg hover:bg-[#6A563D] transition mt-2">نشر المنتج 🚀</button>
                     </div>
@@ -61,7 +54,6 @@
                         <h2 class="text-xl font-bold text-gray-800">📦 سجل الطلبات</h2>
                         <span id="order-count" class="bg-red-100 text-red-600 px-3 py-1 rounded-full text-xs font-bold border border-red-200">0 طلب</span>
                     </div>
-                    
                     <div id="orders-list" class="space-y-4">
                         <p class="text-center text-gray-400 py-10 font-bold animate-pulse">جاري الاستماع للطلبات الجديدة...</p>
                     </div>
@@ -74,41 +66,43 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, deleteDoc, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-        const firebaseConfig = { apiKey: "AIzaSyASO-AN5XaSGn4SaCZ8VlHr6zsFCIxPCzs", authDomain: "ahmed-shoes.firebaseapp.com", projectId: "ahmed-shoes", storageBucket: "ahmed-shoes.firebasestorage.app", messagingSenderId: "172928088473", appId: "1:172928088473:web:100f543fd097a8d5c33b08" };
+        // تم تحديث بيانات فايربيز هنا أيضاً
+        const firebaseConfig = {
+          apiKey: "AIzaSyAnz5eg_i_nvrQr128ms_PlYldEFdIrIUY",
+          authDomain: "wahaj-21a9d.firebaseapp.com",
+          projectId: "wahaj-21a9d",
+          storageBucket: "wahaj-21a9d.firebasestorage.app",
+          messagingSenderId: "820263571886",
+          appId: "1:820263571886:web:2af268a7acbdba7b75f83f",
+          measurementId: "G-CXZZ0N8598"
+        };
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         
         window.tempImage = null;
         let isFirstLoad = true;
 
-        // نظام مراقبة الطلبات اللحظي (Real-time listener)
         onSnapshot(query(collection(db, "orders"), orderBy("timestamp", "desc")), (snap) => {
             const list = document.getElementById('orders-list');
             document.getElementById('order-count').innerText = `${snap.size} طلب`;
-
             if(snap.empty) { list.innerHTML = '<div class="text-center text-gray-400 py-10 font-bold">لا توجد طلبات حتى الآن</div>'; return; }
 
-            // تشغيل صوت الإشعار لو فيه طلب جديد (وليس أثناء التحميل الأول)
             snap.docChanges().forEach((change) => {
                 if (change.type === "added" && !isFirstLoad) {
                     const audio = document.getElementById('notification-sound');
-                    // السماح بالصوت يتطلب تفاعل مسبق من المستخدم، لكنه سيعمل غالباً إذا كانت اللوحة مفتوحة
-                    audio.play().catch(e => console.log("Auto-play blocked, user needs to click anywhere first."));
+                    audio.play().catch(e => console.log("Auto-play blocked"));
                 }
             });
             isFirstLoad = false;
 
-            // رسم الطلبات
             list.innerHTML = snap.docs.map(d => {
                 const o = d.data();
-                const isNew = o.read === false; // حالة الأوردر
+                const isNew = o.read === false; 
                 const statusColors = { 'new': 'bg-yellow-100 text-yellow-700', 'processing': 'bg-blue-100 text-blue-700', 'completed': 'bg-green-100 text-green-700' };
-                const statusText = { 'new': 'جديد ⏳', 'processing': 'جاري التجهيز ⚙️', 'completed': 'مكتمل ✅' };
 
                 return `
                 <div class="p-5 rounded-xl border ${isNew ? 'border-[#8B7355] new-order-anim shadow-md' : 'border-gray-200 bg-gray-50'} transition-all relative overflow-hidden">
                     ${isNew ? '<span class="absolute top-0 right-0 bg-red-500 text-white text-[10px] font-bold px-3 rounded-bl-lg">طلب جديد !</span>' : ''}
-                    
                     <div class="flex justify-between items-start mb-3 mt-2">
                         <div>
                             <h3 class="font-bold text-lg text-gray-800">${o.customerName}</h3>
@@ -120,14 +114,11 @@
                             <p class="text-xs text-gray-400 mt-1">${new Date(o.timestamp).toLocaleString('ar-EG')}</p>
                         </div>
                     </div>
-
                     <div class="bg-white rounded-lg p-3 border border-gray-100 my-3">
-                        <p class="text-xs font-bold text-gray-400 mb-2 border-b pb-1">المنتجات المطلوبة:</p>
                         <div class="space-y-1 text-sm font-bold text-gray-700">
                             ${o.items.map(i => `<div class="flex justify-between"><span>🔸 ${i.name}</span><span>x${i.qty}</span></div>`).join('')}
                         </div>
                     </div>
-
                     <div class="flex items-center gap-2 mt-4 pt-4 border-t border-gray-200">
                         <select onchange="window.updateOrderStatus('${d.id}', this.value)" class="p-2 border rounded-lg text-sm font-bold outline-none flex-1 ${statusColors[o.status||'new']}">
                             <option value="new" ${o.status==='new'?'selected':''}>⏳ قيد المراجعة</option>
@@ -144,7 +135,6 @@
         window.updateOrderStatus = async (id, status) => { await updateDoc(doc(db, "orders", id), { status: status, read: true }); };
         window.delDoc = async (id) => { if(confirm('متأكد من حذف الطلب نهائياً؟')) await deleteDoc(doc(db, "orders", id)); };
 
-        // ضغط ورفع الصورة
         const compress = (f) => new Promise(res => { const r = new FileReader(); r.readAsDataURL(f); r.onload=e=>{ const i=new Image(); i.src=e.target.result; i.onload=()=>{ const c=document.createElement('canvas'); const s=600/i.width; c.width=600; c.height=i.height*s; c.getContext('2d').drawImage(i,0,0,c.width,c.height); res(c.toDataURL('image/jpeg',0.7)); } } });
         
         window.handleImg = async (inp) => { 
@@ -157,7 +147,6 @@
             } 
         };
 
-        // إضافة المنتج للداتابيز
         window.uploadProduct = async () => {
             const name = document.getElementById('prod-name').value;
             const price = document.getElementById('prod-price').value;
@@ -172,24 +161,13 @@
             
             try { 
                 await addDoc(collection(db,"products"),{
-                    name, 
-                    desc,
-                    price: Number(price), 
-                    oldPrice: oldPrice ? Number(oldPrice) : null, 
-                    images: [window.tempImage], 
-                    timestamp: Date.now()
+                    name, desc, price: Number(price), oldPrice: oldPrice ? Number(oldPrice) : null, images: [window.tempImage], timestamp: Date.now()
                 }); 
-                
                 alert('تم نشر الشمعة بنجاح ✨'); 
                 location.reload(); 
-            } catch(e) { 
-                alert('حدث خطأ في الرفع'); 
-                btn.disabled=false; 
-                btn.innerHTML='نشر المنتج 🚀'; 
-            }
+            } catch(e) { alert('حدث خطأ في الرفع'); btn.disabled=false; btn.innerHTML='نشر المنتج 🚀'; }
         };
 
-        // تفعيل الصوت بعد أول كليك في الصفحة عشان المتصفحات بتمنع الـ Autoplay
         document.body.addEventListener('click', () => {
             const audio = document.getElementById('notification-sound');
             if (audio.paused && !audio.src.includes('played')) {
