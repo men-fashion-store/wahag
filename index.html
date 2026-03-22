@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="ar" dir="rtl" class="h-full">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>وَهَج - Wahaj Candles</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = { 
+        theme: { 
+            extend: { 
+                colors: { brand: '#8B7355', bgLight: '#FAF8F5' }, 
+                fontFamily: { sans: ['Cairo', 'sans-serif'] }
+            } 
+        } 
+    }
+  </script>
+  <style>
+    body { background-color: #FAF8F5; -webkit-tap-highlight-color: transparent; }
+    .scroll-hide::-webkit-scrollbar { display: none; }
+    .sale-tag { position: absolute; top: 10px; left: 10px; background: #506146; color: white; padding: 4px 12px; border-radius: 0; font-size: 12px; letter-spacing: 1px; }
+  </style>
+ </head>
+ <body class="min-h-screen pb-24 relative overflow-x-hidden text-gray-800">
+   
+   <div id="toast-container" class="fixed top-5 left-1/2 -translate-x-1/2 z-[9999]"></div>
+
+   <header class="bg-white p-4 sticky top-0 z-40 border-b border-gray-100 flex justify-between items-center">
+       <div class="flex items-center gap-3">
+           <button class="text-2xl">☰</button>
+       </div>
+       <h1 class="text-2xl font-black text-brand tracking-widest">وَهَج</h1>
+       <div class="flex items-center gap-4">
+           <button class="text-xl">🔍</button>
+           <button onclick="openCart()" class="relative">
+               <span class="text-2xl">🛒</span>
+               <span id="cart-badge" class="absolute -top-2 -right-2 w-5 h-5 bg-brand text-white rounded-full text-xs font-bold flex items-center justify-center hidden">0</span>
+           </button>
+       </div>
+   </header>
+
+   <div class="w-full h-64 bg-gray-200 relative mb-8">
+       <img src="https://images.unsplash.com/photo-1603006905003-be475563bc59" class="w-full h-full object-cover">
+       <div class="absolute inset-0 bg-black/30 flex items-center justify-center">
+           <h2 class="text-white text-3xl font-black tracking-widest text-center leading-relaxed">الهدوء المعبأ<br>في زجاجة</h2>
+       </div>
+   </div>
+
+   <div class="max-w-4xl mx-auto px-4">
+       <h2 class="text-2xl font-bold mb-6 text-center tracking-widest text-gray-700 uppercase">مجموعتنا الحصرية</h2>
+       <div id="products-grid" class="grid grid-cols-2 md:grid-cols-3 gap-4 pb-8">
+           </div>
+   </div>
+
+   <div id="cart-modal" class="hidden fixed inset-0 z-[60] bg-black/40 backdrop-blur-sm flex justify-end">
+     <div class="bg-white w-full max-w-md h-full flex flex-col shadow-2xl transition-transform">
+        <div class="p-6 border-b flex justify-between items-center">
+            <h2 class="font-bold text-xl text-brand">سلة التسوق</h2>
+            <button onclick="closeCart()" class="text-gray-400 hover:text-gray-800 text-2xl">✕</button>
+        </div>
+        <div id="cart-items" class="flex-1 overflow-y-auto p-6 space-y-4"></div>
+        <div class="p-6 border-t bg-[#FAF8F5]">
+            <div class="flex justify-between font-bold text-xl mb-6">
+                <span>الإجمالي:</span>
+                <span id="cart-total" class="text-brand">0 ج.م</span>
+            </div>
+            <div class="space-y-3 mb-4">
+                <input id="cart-name" class="w-full p-3 border border-gray-200 bg-white outline-none focus:border-brand" placeholder="الاسم الكريم">
+                <input id="cart-phone" class="w-full p-3 border border-gray-200 bg-white outline-none focus:border-brand" placeholder="رقم الموبايل">
+                <textarea id="cart-address" class="w-full p-3 border border-gray-200 bg-white outline-none focus:border-brand h-20" placeholder="عنوان التوصيل بالتفصيل"></textarea>
+            </div>
+            <button onclick="confirmOrder()" class="w-full py-4 bg-brand text-white font-bold tracking-widest uppercase hover:bg-opacity-90 transition">تأكيد الطلب</button>
+        </div>
+     </div>
+   </div>
+
+   <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, collection, getDocs, query, orderBy, addDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    // بيانات فايربيز الخاصة بك
+    const firebaseConfig = { apiKey: "AIzaSyASO-AN5XaSGn4SaCZ8VlHr6zsFCIxPCzs", authDomain: "ahmed-shoes.firebaseapp.com", projectId: "ahmed-shoes", storageBucket: "ahmed-shoes.firebasestorage.app", messagingSenderId: "172928088473", appId: "1:172928088473:web:100f543fd097a8d5c33b08" };
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    window.cart = JSON.parse(localStorage.getItem('wahajCart')) || [];
+    window.products = [];
+
+    async function loadProducts() {
+        const q = query(collection(db, "products"), orderBy("timestamp", "desc"));
+        const snap = await getDocs(q);
+        window.products = snap.docs.map(d => ({id: d.id, ...d.data()}));
+        renderProducts();
+    }
+
+    function renderProducts() {
+        const grid = document.getElementById('products-grid');
+        grid.innerHTML = window.products.map(p => {
+            const hasSale = p.oldPrice && p.oldPrice > p.price;
+            return `
+            <div class="bg-white rounded-none border border-gray-100 overflow-hidden group">
+                <div class="relative h-56 bg-gray-50 overflow-hidden">
+                    ${hasSale ? `<span class="sale-tag">SALE</span>` : ''}
+                    <img src="${p.images[0]}" class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
+                    <button onclick="addToCart('${p.id}')" class="absolute bottom-0 left-0 right-0 bg-brand text-white py-3 translate-y-full group-hover:translate-y-0 transition duration-300 text-sm font-bold tracking-widest">إضافة للسلة</button>
+                </div>
+                <div class="p-4 text-center">
+                    <h4 class="font-bold text-gray-800 text-lg mb-1">${p.name}</h4>
+                    <div class="flex justify-center items-center gap-2">
+                        <span class="font-bold text-brand">${p.price} ج.م</span>
+                        ${hasSale ? `<span class="text-sm text-gray-400 line-through">${p.oldPrice}</span>` : ''}
+                    </div>
+                </div>
+            </div>`;
+        }).join('');
+    }
+
+    // --- نظام السلة ---
+    window.addToCart = (id) => {
+        const p = window.products.find(x => x.id === id);
+        const existing = window.cart.find(i => i.id === id);
+        if(existing) existing.qty += 1;
+        else window.cart.push({ id: p.id, name: p.name, price: p.price, image: p.images[0], qty: 1 });
+        
+        saveCart(); updateBadge(); window.toast('تمت الإضافة للسلة ✨'); openCart();
+    };
+
+    window.renderCartItems = () => {
+        const container = document.getElementById('cart-items');
+        let total = 0;
+        if(!window.cart.length) { container.innerHTML = '<p class="text-center text-gray-400 mt-10">السلة فارغة</p>'; document.getElementById('cart-total').innerText='0 ج.م'; return; }
+        
+        container.innerHTML = window.cart.map((i, idx) => {
+            total += i.price * i.qty;
+            return `
+            <div class="flex gap-4 items-center bg-white p-3 border border-gray-100">
+                <img src="${i.image}" class="w-20 h-20 object-cover bg-gray-50">
+                <div class="flex-1">
+                    <h4 class="font-bold text-sm text-gray-800">${i.name}</h4>
+                    <p class="font-bold text-brand mt-1">${i.price} ج.م</p>
+                    <div class="flex items-center gap-3 mt-2 border w-fit px-2 py-1">
+                        <button onclick="updateQty(${idx}, -1)" class="text-gray-500">-</button>
+                        <span class="text-sm">${i.qty}</span>
+                        <button onclick="updateQty(${idx}, 1)" class="text-gray-500">+</button>
+                    </div>
+                </div>
+                <button onclick="window.cart.splice(${idx},1); renderCartItems(); saveCart(); updateBadge();" class="text-gray-300 hover:text-red-500">✕</button>
+            </div>`;
+        }).join('');
+        document.getElementById('cart-total').innerText = total + ' ج.م';
+    };
+
+    window.updateQty = (idx, val) => { window.cart[idx].qty += val; if(window.cart[idx].qty <= 0) window.cart.splice(idx,1); saveCart(); renderCartItems(); updateBadge(); };
+    window.saveCart = () => localStorage.setItem('wahajCart', JSON.stringify(window.cart));
+    window.updateBadge = () => { const count = window.cart.reduce((s, i) => s + i.qty, 0); const b = document.getElementById('cart-badge'); b.innerText = count; count > 0 ? b.classList.remove('hidden') : b.classList.add('hidden'); };
+    window.openCart = () => { renderCartItems(); document.getElementById('cart-modal').classList.remove('hidden'); };
+    window.closeCart = () => document.getElementById('cart-modal').classList.add('hidden');
+    window.toast = (msg) => { const el = document.createElement('div'); el.className = "bg-brand text-white px-6 py-3 shadow-xl mb-2"; el.innerText = msg; document.getElementById('toast-container').appendChild(el); setTimeout(()=>el.remove(), 3000); };
+
+    window.confirmOrder = async () => {
+        const name = document.getElementById('cart-name').value, phone = document.getElementById('cart-phone').value, address = document.getElementById('cart-address').value;
+        if(!name || !phone || !address || !window.cart.length) return window.toast('يرجى إكمال بيانات التوصيل وإضافة منتجات');
+        
+        try {
+            await addDoc(collection(db, "orders"), { items: window.cart, total: window.cart.reduce((s,i)=>s+(i.price*i.qty),0), customerName: name, customerPhone: phone, customerAddress: address, timestamp: Date.now(), status: 'new' });
+            
+            // رسالة واتساب أنيقة
+            const msg = `✨ *طلب جديد من وَهَج*\n\nالاسم: ${name}\nرقم التواصل: ${phone}\nالعنوان: ${address}\n\n*المنتجات:*\n` + window.cart.map(i=>`- ${i.name} (الكمية: ${i.qty})`).join('\n') + `\n\n💰 الإجمالي: ${window.cart.reduce((s,i)=>s+(i.price*i.qty),0)} ج.م`;
+            window.open(`https://wa.me/201020468021?text=${encodeURIComponent(msg)}`, '_blank');
+            
+            window.cart = []; saveCart(); updateBadge(); closeCart(); window.toast('تم تأكيد الطلب بنجاح! شكراً لاختيارك وَهَج');
+        } catch(e) { window.toast('حدث خطأ، يرجى المحاولة لاحقاً'); }
+    };
+
+    loadProducts(); updateBadge();
+   </script>
+ </body>
+</html>
