@@ -1,54 +1,128 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, collection, getDocs, query, orderBy, addDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getFirestore, collection, getDocs, query, orderBy, addDoc, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-// تم الربط بقاعدة بيانات "وَهَج" الجديدة
-const firebaseConfig = {
-  apiKey: "AIzaSyAnz5eg_i_nvrQr128ms_PlYldEFdIrIUY",
-  authDomain: "wahaj-21a9d.firebaseapp.com",
-  projectId: "wahaj-21a9d",
-  storageBucket: "wahaj-21a9d.firebasestorage.app",
-  messagingSenderId: "820263571886",
-  appId: "1:820263571886:web:2af268a7acbdba7b75f83f",
-  measurementId: "G-CXZZ0N8598"
-};
+const firebaseConfig = { apiKey: "AIzaSyAnz5eg_i_nvrQr128ms_PlYldEFdIrIUY", authDomain: "wahaj-21a9d.firebaseapp.com", projectId: "wahaj-21a9d", storageBucket: "wahaj-21a9d.firebasestorage.app", messagingSenderId: "820263571886", appId: "1:820263571886:web:2af268a7acbdba7b75f83f", measurementId: "G-CXZZ0N8598" };
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+const auth = getAuth(app);
 
 window.cart = JSON.parse(localStorage.getItem('wahaj_cart')) || [];
 window.products = [];
-window.checkoutStep = 1;
+window.currentUser = null;
 
-async function fetchProducts() {
+// مراقبة حالة تسجيل الدخول
+onAuthStateChanged(auth, async (user) => {
+    const modal = document.getElementById('auth-modal');
+    if (user) {
+        // لو مسجل دخول، نجيب بياناته من الداتابيز
+        const docSnap = await getDoc(doc(db, "users", user.uid));
+        if (docSnap.exists()) {
+            window.currentUser = docSnap.data();
+            document.getElementById('header-user-name').innerText = window.currentUser.name.split(' ')[0]; // الاسم الأول بس
+            
+            // تحديث واجهة المودال للبروفايل
+            document.getElementById('form-login').classList.add('hidden');
+            document.getElementById('form-signup').classList.add('hidden');
+            document.getElementById('tab-login').parentElement.classList.add('hidden');
+            document.getElementById('user-profile').classList.remove('hidden');
+            document.getElementById('profile-name').innerText = window.currentUser.name;
+            document.getElementById('profile-phone').innerText = window.currentUser.phone;
+        }
+    } else {
+        window.currentUser = null;
+        document.getElementById('header-user-name').innerText = 'دخول';
+        document.getElementById('user-profile').classList.add('hidden');
+        document.getElementById('tab-login').parentElement.classList.remove('hidden');
+        window.switchAuthTab('login');
+    }
+});
+
+// دوال الواجهة للحسابات
+window.openAuth = () => {
+    const m = document.getElementById('auth-modal');
+    m.classList.remove('hidden');
+    setTimeout(()=> m.classList.remove('opacity-0'), 10);
+};
+window.closeAuth = () => {
+    const m = document.getElementById('auth-modal');
+    m.classList.add('opacity-0');
+    setTimeout(()=> m.classList.add('hidden'), 300);
+};
+window.switchAuthTab = (tab) => {
+    document.getElementById('form-login').classList.toggle('hidden', tab !== 'login');
+    document.getElementById('form-signup').classList.toggle('hidden', tab !== 'signup');
+    
+    document.getElementById('tab-login').className = tab === 'login' ? 'flex-1 py-4 font-black text-[#8B7355] border-b-2 border-[#8B7355]' : 'flex-1 py-4 font-bold text-gray-400 border-b-2 border-transparent';
+    document.getElementById('tab-signup').className = tab === 'signup' ? 'flex-1 py-4 font-black text-[#8B7355] border-b-2 border-[#8B7355]' : 'flex-1 py-4 font-bold text-gray-400 border-b-2 border-transparent';
+};
+
+// إنشاء حساب
+window.handleSignup = async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('btn-signup');
+    const name = document.getElementById('signup-name').value;
+    const phone = document.getElementById('signup-phone').value;
+    const pass = document.getElementById('signup-pass').value;
+    const address = document.getElementById('signup-address').value;
+    const fakeEmail = `${phone}@wahaj.com`; // فايربيز بيطلب إيميل، فبنعمل إيميل وهمي بالرقم
+
+    btn.disabled = true; btn.innerText = 'جاري الإنشاء...';
     try {
-        const q = query(collection(db, "products"), orderBy("timestamp", "desc"));
-        const snap = await getDocs(q);
-        window.products = snap.docs.map(d => ({id: d.id, ...d.data()}));
-        renderProducts();
-    } catch(e) { window.toast('حدث خطأ في جلب الشموع', 'error'); }
+        const userCredential = await createUserWithEmailAndPassword(auth, fakeEmail, pass);
+        // حفظ البيانات في قاعدة البيانات
+        await setDoc(doc(db, "users", userCredential.user.uid), { name, phone, address, uid: userCredential.user.uid });
+        window.toast('تم إنشاء الحساب بنجاح ✨', 'success');
+        setTimeout(window.closeAuth, 1000);
+    } catch(err) {
+        window.toast('الرقم مسجل مسبقاً أو الرقم السري ضعيف', 'error');
+    }
+    btn.disabled = false; btn.innerText = 'إنشاء الحساب';
+};
+
+// تسجيل دخول
+window.handleLogin = async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('btn-login');
+    const phone = document.getElementById('login-phone').value;
+    const pass = document.getElementById('login-pass').value;
+    const fakeEmail = `${phone}@wahaj.com`;
+
+    btn.disabled = true; btn.innerText = 'جاري الدخول...';
+    try {
+        await signInWithEmailAndPassword(auth, fakeEmail, pass);
+        window.toast('أهلاً بك في وَهَج ✨', 'success');
+        setTimeout(window.closeAuth, 1000);
+    } catch(err) { window.toast('الرقم أو كلمة المرور خطأ', 'error'); }
+    btn.disabled = false; btn.innerText = 'دخول';
+};
+
+window.handleLogout = () => { signOut(auth); window.closeAuth(); window.toast('تم تسجيل الخروج'); };
+
+// جلب المنتجات (كما هي)
+async function fetchProducts() {
+    const q = query(collection(db, "products"), orderBy("timestamp", "desc"));
+    const snap = await getDocs(q);
+    window.products = snap.docs.map(d => ({id: d.id, ...d.data()}));
+    renderProducts();
 }
 
 function renderProducts() {
     const grid = document.getElementById('products-grid');
-    if(!window.products.length) { 
-        grid.innerHTML = '<div class="col-span-full text-center py-20"><p class="text-gray-400 font-bold text-lg">لم يتم إضافة شموع بعد. أضف أول شمعة من لوحة التحكم ✨</p></div>'; 
-        return; 
-    }
-    
     grid.innerHTML = window.products.map(p => {
         const hasSale = p.oldPrice && Number(p.oldPrice) > Number(p.price);
         return `
-        <div class="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-xl transition-shadow duration-300 group flex flex-col">
+        <div class="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm group flex flex-col">
             <div class="relative h-64 bg-gray-50 overflow-hidden">
                 ${hasSale ? `<span class="absolute top-3 right-3 bg-red-500 text-white text-xs font-bold px-3 py-1 rounded-full z-10">خصم</span>` : ''}
                 <img src="${p.images[0]}" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700">
-                <div class="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-                    <button onclick="addToCart('${p.id}')" class="bg-white text-[#8B7355] px-6 py-2 rounded-full font-bold shadow-lg transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300 hover:bg-[#8B7355] hover:text-white">أضف للسلة 🛒</button>
+                <div class="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <button onclick="addToCart('${p.id}')" class="bg-white text-[#8B7355] px-6 py-2 rounded-full font-bold shadow-lg hover:bg-[#8B7355] hover:text-white transition">أضف للسلة 🛒</button>
                 </div>
             </div>
             <div class="p-5 flex-1 flex flex-col">
-                <h3 class="font-bold text-xl text-gray-800 mb-1">${p.name}</h3>
-                ${p.desc ? `<p class="text-xs text-gray-500 mb-3 line-clamp-2">${p.desc}</p>` : ''}
+                <h3 class="font-bold text-xl mb-1">${p.name}</h3>
                 <div class="mt-auto flex justify-between items-center">
                     <div class="flex flex-col">
                         ${hasSale ? `<span class="text-xs text-gray-400 line-through">${p.oldPrice} ج.م</span>` : ''}
@@ -60,153 +134,65 @@ function renderProducts() {
     }).join('');
 }
 
+// السلة والدفع
 window.addToCart = (id) => {
     const prod = window.products.find(x => x.id === id);
     const exists = window.cart.find(i => i.id === id);
-    
-    if(exists) exists.qty++;
-    else window.cart.push({ id: prod.id, name: prod.name, price: Number(prod.price), image: prod.images[0], qty: 1 });
-    
-    saveCart(); updateBadge(); renderCartDrawer(); 
-    window.toast(`تم إضافة "${prod.name}" للسلة ✨`);
-    
-    if(document.getElementById('cart-drawer').classList.contains('cart-closed')) toggleCart();
+    if(exists) exists.qty++; else window.cart.push({ id: prod.id, name: prod.name, price: Number(prod.price), image: prod.images[0], qty: 1 });
+    saveCart(); updateBadge(); renderCartDrawer(); window.toast('تمت الإضافة للسلة ✨');
 };
 
 window.renderCartDrawer = () => {
     const container = document.getElementById('cart-items');
     let total = 0;
-    
-    if(window.cart.length === 0) {
-        container.innerHTML = `
-            <div class="flex flex-col items-center justify-center h-full text-gray-400 opacity-60 mt-20">
-                <svg class="w-24 h-24 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
-                <p class="font-bold text-lg">سلتك فارغة</p>
-                <p class="text-sm">لم تقم بإضافة أي شموع بعد.</p>
-            </div>`;
-        document.getElementById('cart-total').innerText = '0 ج.م';
-        resetCheckout();
-        return;
-    }
-
-    container.innerHTML = window.cart.map((item, idx) => {
-        total += item.price * item.qty;
+    if(window.cart.length === 0) { container.innerHTML = '<p class="text-center text-gray-400 py-20 font-bold">السلة فارغة</p>'; document.getElementById('cart-total').innerText = '0 ج.م'; return; }
+    container.innerHTML = window.cart.map((i, idx) => {
+        total += i.price * i.qty;
         return `
         <div class="flex gap-4 bg-white p-3 rounded-xl border border-gray-100 shadow-sm relative">
-            <img src="${item.image}" class="w-20 h-20 rounded-lg object-cover bg-gray-50 border">
+            <img src="${i.image}" class="w-20 h-20 rounded-lg object-cover bg-gray-50 border">
             <div class="flex-1 flex flex-col justify-between">
-                <h4 class="font-bold text-sm text-gray-800 pr-5">${item.name}</h4>
-                <p class="font-black text-[#8B7355]">${item.price * item.qty} ج.م</p>
-                <div class="flex items-center gap-3 bg-gray-50 w-fit rounded-lg border border-gray-200 p-1">
-                    <button onclick="updateQty(${idx}, -1)" class="w-6 h-6 flex items-center justify-center text-[#8B7355] font-bold hover:bg-gray-200 rounded">-</button>
-                    <span class="text-sm font-bold w-4 text-center">${item.qty}</span>
-                    <button onclick="updateQty(${idx}, 1)" class="w-6 h-6 flex items-center justify-center text-[#8B7355] font-bold hover:bg-gray-200 rounded">+</button>
-                </div>
+                <h4 class="font-bold text-sm pr-5">${i.name}</h4><p class="font-black text-[#8B7355]">${i.price * i.qty} ج.م</p>
+                <div class="flex gap-3 bg-gray-50 w-fit rounded-lg border p-1"><button onclick="updateQty(${idx}, -1)" class="w-6 font-bold">-</button><span class="text-sm font-bold w-4 text-center">${i.qty}</span><button onclick="updateQty(${idx}, 1)" class="w-6 font-bold">+</button></div>
             </div>
-            <button onclick="removeItem(${idx})" class="absolute top-2 left-2 text-gray-300 hover:text-red-500 transition p-1">✕</button>
+            <button onclick="removeItem(${idx})" class="absolute top-2 left-2 text-gray-300 hover:text-red-500">✕</button>
         </div>`;
     }).join('');
-    
     document.getElementById('cart-total').innerText = total + ' ج.م';
 };
 
 window.updateQty = (idx, val) => { window.cart[idx].qty += val; if(window.cart[idx].qty <= 0) window.cart.splice(idx,1); saveCart(); updateBadge(); renderCartDrawer(); };
 window.removeItem = (idx) => { window.cart.splice(idx,1); saveCart(); updateBadge(); renderCartDrawer(); };
 window.saveCart = () => localStorage.setItem('wahaj_cart', JSON.stringify(window.cart));
+window.updateBadge = () => { const c = window.cart.reduce((s, i) => s + i.qty, 0); const b = document.getElementById('cart-badge'); b.innerText = c; c > 0 ? b.classList.replace('scale-0', 'scale-100') : b.classList.replace('scale-100', 'scale-0'); };
+window.toggleCart = () => { const d = document.getElementById('cart-drawer'), o = document.getElementById('cart-overlay'); if(d.classList.contains('cart-closed')) { renderCartDrawer(); d.classList.replace('cart-closed', 'cart-open'); o.classList.remove('hidden'); setTimeout(()=>o.classList.add('opacity-100'),10); } else { d.classList.replace('cart-open', 'cart-closed'); o.classList.remove('opacity-100'); setTimeout(()=>o.classList.add('hidden'),300); } };
 
-window.updateBadge = () => { 
-    const count = window.cart.reduce((s, i) => s + i.qty, 0); 
-    const badge = document.getElementById('cart-badge');
-    badge.innerText = count; 
-    if(count > 0) { badge.classList.remove('scale-0'); badge.classList.add('scale-100'); } 
-    else { badge.classList.remove('scale-100'); badge.classList.add('scale-0'); }
-};
-
-window.toggleCart = () => {
-    const drawer = document.getElementById('cart-drawer');
-    const overlay = document.getElementById('cart-overlay');
-    
-    if(drawer.classList.contains('cart-closed')) {
-        renderCartDrawer();
-        drawer.classList.remove('cart-closed');
-        drawer.classList.add('cart-open');
-        overlay.classList.remove('hidden');
-        setTimeout(()=> overlay.classList.add('opacity-100'), 10);
-        document.body.style.overflow = 'hidden';
-    } else {
-        drawer.classList.remove('cart-open');
-        drawer.classList.add('cart-closed');
-        overlay.classList.remove('opacity-100');
-        setTimeout(()=> overlay.classList.add('hidden'), 300);
-        document.body.style.overflow = '';
-        resetCheckout();
-    }
-};
-
-function resetCheckout() {
-    window.checkoutStep = 1;
-    document.getElementById('checkout-form').classList.add('hidden');
-    document.getElementById('cart-items').style.display = 'block';
-    document.getElementById('checkout-btn').innerHTML = 'متابعة الطلب ➔';
-}
-
-window.handleCheckoutStep = async () => {
+// زر تأكيد الطلب المباشر
+window.handleCheckout = async () => {
     if(!window.cart.length) return window.toast('السلة فارغة!', 'error');
+    if(!window.currentUser) { window.toast('برجاء تسجيل الدخول أولاً لإتمام الطلب', 'error'); window.toggleCart(); window.openAuth(); return; }
 
-    if(window.checkoutStep === 1) {
-        window.checkoutStep = 2;
-        document.getElementById('cart-items').style.display = 'none';
-        document.getElementById('checkout-form').classList.remove('hidden');
-        document.getElementById('checkout-btn').innerHTML = 'تأكيد وإرسال الطلب ✅';
-    } else {
-        const name = document.getElementById('cart-name').value.trim();
-        const phone = document.getElementById('cart-phone').value.trim();
-        const address = document.getElementById('cart-address').value.trim();
-        const btn = document.getElementById('checkout-btn');
+    const btn = document.getElementById('checkout-btn');
+    btn.disabled = true; btn.innerText = 'جاري الإرسال...';
+    const totalAmount = window.cart.reduce((s,i) => s + (i.price * i.qty), 0);
+    
+    try {
+        await addDoc(collection(db, "orders"), {
+            items: window.cart, total: totalAmount, 
+            customerName: window.currentUser.name, customerPhone: window.currentUser.phone, customerAddress: window.currentUser.address, 
+            timestamp: Date.now(), status: 'new', read: false
+        });
 
-        if(!name || !phone || !address) return window.toast('يرجى ملء جميع بيانات التوصيل', 'error');
+        let msg = `✨ *طلب جديد من تطبيق وَهَج* ✨\n\n👤 *الاسم:* ${window.currentUser.name}\n📞 *الموبايل:* ${window.currentUser.phone}\n📍 *العنوان:* ${window.currentUser.address}\n\n🛍️ *التفاصيل:*\n`;
+        window.cart.forEach(item => { msg += `🔸 ${item.name} (الكمية: ${item.qty})\n`; });
+        msg += `\n💰 *الإجمالي المطلوب:* ${totalAmount} ج.م`;
 
-        btn.disabled = true;
-        btn.innerHTML = 'جاري الإرسال... ⏳';
-
-        const totalAmount = window.cart.reduce((s,i) => s + (i.price * i.qty), 0);
-        
-        try {
-            await addDoc(collection(db, "orders"), {
-                items: window.cart, total: totalAmount, customerName: name, customerPhone: phone, customerAddress: address, timestamp: Date.now(), status: 'new', read: false
-            });
-
-            let msg = `✨ *طلب جديد من متجر وَهَج* ✨\n\n👤 *الاسم:* ${name}\n📞 *الموبايل:* ${phone}\n📍 *العنوان:* ${address}\n\n🛍️ *التفاصيل:*\n`;
-            window.cart.forEach(item => { msg += `🔸 ${item.name} (الكمية: ${item.qty})\n`; });
-            msg += `\n💰 *الإجمالي المطلوب:* ${totalAmount} ج.م`;
-
-            window.cart = []; saveCart(); updateBadge(); toggleCart();
-            window.toast('تم تأكيد طلبك بنجاح! سيتم تحويلك للواتساب...', 'success');
-
-            setTimeout(() => {
-                window.open(`https://wa.me/201020468021?text=${encodeURIComponent(msg)}`, '_blank');
-                btn.disabled = false;
-            }, 1500);
-
-        } catch(e) { window.toast('حدث خطأ، حاول مرة أخرى', 'error'); btn.disabled = false; btn.innerHTML = 'تأكيد وإرسال الطلب ✅'; }
-    }
+        window.cart = []; saveCart(); updateBadge(); window.toggleCart();
+        window.toast('تم تأكيد طلبك بنجاح!', 'success');
+        setTimeout(() => { window.open(`https://wa.me/201020468021?text=${encodeURIComponent(msg)}`, '_blank'); btn.disabled = false; btn.innerText = 'تأكيد الطلب ✅'; }, 1500);
+    } catch(e) { window.toast('حدث خطأ، حاول مرة أخرى', 'error'); btn.disabled = false; btn.innerText = 'تأكيد الطلب ✅'; }
 };
 
-window.toast = (msg, type = 'success') => {
-    const container = document.getElementById('toast-container');
-    const el = document.createElement('div');
-    const bgColor = type === 'error' ? 'bg-red-500' : 'bg-[#6A563D]';
-    el.className = `${bgColor} text-white px-6 py-3 rounded-xl shadow-2xl font-bold flex items-center gap-2 toast-animate border border-white/20`;
-    el.innerHTML = type === 'error' ? `<span>⚠️</span> ${msg}` : `<span>✨</span> ${msg}`;
-    container.appendChild(el);
-    setTimeout(() => {
-        el.style.opacity = '0';
-        el.style.transform = 'translate(-50%, -100%)';
-        el.style.transition = 'all 0.3s ease-in';
-        setTimeout(()=> el.remove(), 300);
-    }, 3000);
-};
+window.toast = (msg, type = 'success') => { const c = document.getElementById('toast-container'), el = document.createElement('div'); el.className = `${type === 'error' ? 'bg-red-500' : 'bg-[#6A563D]'} text-white px-6 py-3 rounded-xl shadow-2xl font-bold flex items-center gap-2 toast-animate border border-white/20`; el.innerHTML = `<span>${type === 'error' ? '⚠️' : '✨'}</span> ${msg}`; c.appendChild(el); setTimeout(() => { el.style.opacity = '0'; el.style.transform = 'translate(-50%, -100%)'; el.style.transition = 'all 0.3s ease-in'; setTimeout(()=> el.remove(), 300); }, 3000); };
 
-// تشغيل جلب الشموع عند تحميل الصفحة
-fetchProducts();
-updateBadge();
+fetchProducts(); updateBadge();
