@@ -14,7 +14,6 @@ window.banners = [];
 window.currentUser = null;
 window.currentProduct = null;
 
-// تحديث الخلفية الرئيسية للمتجر تلقائياً
 onSnapshot(doc(db, "settings", "theme"), (docSnap) => {
     if(docSnap.exists() && docSnap.data().heroImage) {
         const heroImg = document.getElementById('main-hero-img');
@@ -22,7 +21,6 @@ onSnapshot(doc(db, "settings", "theme"), (docSnap) => {
     }
 });
 
-// --- المصادقة والمستخدمين ---
 onAuthStateChanged(auth, async (user) => {
     if (user) {
         const docSnap = await getDoc(doc(db, "users", user.uid));
@@ -82,7 +80,6 @@ window.handleLogin = async (e) => {
 
 window.handleLogout = () => { signOut(auth); window.toast('تم تسجيل الخروج'); window.switchNav('home'); };
 
-// --- جلب البيانات (شموع وعروض) ---
 async function fetchData() {
     const qP = query(collection(db, "products"), orderBy("timestamp", "desc"));
     const snapP = await getDocs(qP);
@@ -98,7 +95,7 @@ async function fetchData() {
 function renderHome() {
     const slider = document.getElementById('home-slider');
     if(window.banners.length > 0) {
-        slider.innerHTML = window.banners.map(img => `<img src="${img}" class="min-w-full h-full object-cover snap-center rounded-2xl">`).join('');
+        slider.innerHTML = window.banners.map(img => `<img src="${img}" class="min-w-full h-full object-cover snap-center rounded-2xl border border-gray-100">`).join('');
     } else {
         slider.parentElement.classList.add('hidden');
     }
@@ -120,7 +117,7 @@ function renderProductGrid(containerId, items) {
         return `
         <div class="min-w-[160px] md:min-w-[200px] bg-white rounded-2xl shadow-sm border border-[#FAF8F5] overflow-hidden relative group shrink-0">
             ${hasSale ? `<span class="absolute top-2 right-2 bg-red-500 text-white text-[10px] font-bold px-2 py-1 rounded-full z-10">خصم</span>` : ''}
-            <button onclick="window.toggleWishlist('${p.id}', event)" class="absolute top-2 left-2 z-10 w-8 h-8 bg-white/80 rounded-full flex items-center justify-center shadow-sm">
+            <button onclick="window.toggleWishlist('${p.id}', event)" class="absolute top-2 left-2 z-10 w-8 h-8 bg-white/80 backdrop-blur-sm rounded-full flex items-center justify-center shadow-sm">
                 <svg class="w-5 h-5 transition ${isWished ? 'fill-red-500 stroke-red-500' : 'fill-none stroke-gray-400'}" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
             </button>
             <div class="h-40 bg-gray-50 overflow-hidden cursor-pointer" onclick="window.openProductDetails('${p.id}')">
@@ -130,20 +127,33 @@ function renderProductGrid(containerId, items) {
                 <h3 class="font-bold text-sm text-gray-800 truncate mb-1">${p.name}</h3>
                 <div class="flex justify-between items-center">
                     <span class="font-black text-[#8B7355] text-sm">${p.price} ج.م</span>
-                    <button onclick="window.addToCart('${p.id}')" class="w-8 h-8 bg-[#FAF8F5] rounded-full flex items-center justify-center text-[#8B7355] hover:bg-[#8B7355] hover:text-white transition">🛒</button>
+                    <button onclick="window.addToCart('${p.id}', event)" class="w-8 h-8 bg-[#FAF8F5] rounded-full flex items-center justify-center text-[#8B7355] hover:bg-[#8B7355] hover:text-white transition shadow-sm">🛒</button>
                 </div>
             </div>
         </div>`;
     }).join('');
 }
 
-// --- تفاصيل المنتج ---
+// --- تفاصيل المنتج (بشكل موسع مع معرض للصور) ---
 window.openProductDetails = (id) => {
     const p = window.products.find(x => x.id === id);
     window.currentProduct = p;
-    document.getElementById('pd-image').src = p.images[0];
+    
+    document.getElementById('pd-main-image').src = p.images[0];
+    
+    const thumbsContainer = document.getElementById('pd-thumbnails');
+    if(p.images.length > 1) {
+        thumbsContainer.innerHTML = p.images.map(img => 
+            `<img src="${img}" onclick="document.getElementById('pd-main-image').src='${img}'" class="w-16 h-16 object-cover rounded-xl border-2 border-transparent hover:border-[#8B7355] cursor-pointer shadow-sm snap-center shrink-0 transition">`
+        ).join('');
+        thumbsContainer.classList.remove('hidden');
+    } else {
+        thumbsContainer.classList.add('hidden');
+    }
+
     document.getElementById('pd-name').innerText = p.name;
-    document.getElementById('pd-price').innerText = p.price + ' ج.م';
+    const hasSale = p.oldPrice > p.price;
+    document.getElementById('pd-price').innerHTML = `${p.price} ج.م ${hasSale ? `<span class="text-sm line-through text-red-400 ml-2">${p.oldPrice} ج.م</span>` : ''}`;
     document.getElementById('pd-desc').innerText = p.desc || 'شمعة يدوية الصنع تضفي لمسة من الفخامة والدفء.';
     
     document.getElementById('view-home').classList.add('hidden');
@@ -151,8 +161,8 @@ window.openProductDetails = (id) => {
     window.scrollTo(0,0);
 };
 
-// --- السلة والمقدم (Deposit) ---
-window.addToCart = (id) => {
+window.addToCart = (id, event) => {
+    if(event) event.stopPropagation();
     const p = window.products.find(x => x.id === id);
     const exists = window.cart.find(i => i.id === id);
     if(exists) exists.qty++; else window.cart.push({ id: p.id, name: p.name, price: Number(p.price), image: p.images[0], qty: 1 });
@@ -179,7 +189,7 @@ window.renderCartDrawer = () => {
                 <p class="font-black text-[#8B7355]">${i.price * i.qty} ج.م</p>
                 <div class="flex gap-3 bg-[#FAF8F5] w-fit rounded-lg mt-2 p-1"><button onclick="window.updateQty(${idx}, -1)" class="w-6 font-bold text-[#8B7355]">-</button><span class="text-sm font-bold w-4 text-center">${i.qty}</span><button onclick="window.updateQty(${idx}, 1)" class="w-6 font-bold text-[#8B7355]">+</button></div>
             </div>
-            <button onclick="window.removeItem(${idx})" class="absolute top-2 left-2 text-gray-300 hover:text-red-500">✕</button>
+            <button onclick="window.removeItem(${idx})" class="absolute top-2 left-2 text-gray-300 hover:text-red-500 p-1">✕</button>
         </div>`;
     }).join('');
 
@@ -228,7 +238,6 @@ window.updateBadge = () => { const c = window.cart.reduce((s, i) => s + i.qty, 0
 window.toggleCart = () => { const d = document.getElementById('cart-drawer'), o = document.getElementById('cart-overlay'); if(d.classList.contains('cart-closed')) { window.renderCartDrawer(); d.classList.replace('cart-closed', 'cart-open'); o.classList.remove('hidden'); setTimeout(()=>o.classList.add('opacity-100'),10); } else { d.classList.replace('cart-open', 'cart-closed'); o.classList.remove('opacity-100'); setTimeout(()=>o.classList.add('hidden'),300); } };
 window.toast = (msg, type = 'success') => { const c = document.getElementById('toast-container'), el = document.createElement('div'); el.className = `${type === 'error' ? 'bg-red-500' : 'bg-[#D4AF37] text-gray-900'} px-6 py-3 rounded-xl shadow-xl font-bold flex items-center gap-2 toast-animate border border-white/20`; el.innerHTML = `<span>${type === 'error' ? '⚠️' : '✨'}</span> ${msg}`; c.appendChild(el); setTimeout(() => { el.style.opacity = '0'; setTimeout(()=> el.remove(), 300); }, 3000); };
 
-// --- Navigation السفلي ---
 window.switchNav = (viewId) => {
     ['home', 'wishlist', 'orders', 'profile', 'product-details'].forEach(v => {
         document.getElementById('view-'+v).classList.add('hidden');
@@ -249,7 +258,6 @@ window.switchAuthTab = (tab) => {
     document.getElementById('tab-signup').className = tab === 'signup' ? 'flex-1 py-3 font-black text-[#8B7355] border-b-2 border-[#8B7355]' : 'flex-1 py-3 font-bold text-gray-400 border-b-2 border-transparent';
 };
 
-// --- المفضلة والطلبات ---
 window.toggleWishlist = async (id, event) => {
     if(event) event.stopPropagation();
     if(!window.currentUser) return window.toast('سجل دخول لحفظ المفضلة', 'error');
