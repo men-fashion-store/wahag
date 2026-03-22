@@ -1,8 +1,7 @@
-// ملف app.js - المحرك الرئيسي للمتجر والسلة
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getFirestore, collection, getDocs, query, orderBy, addDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-// بيانات قاعدة بيانات وَهَج الجديدة
+// تم الربط بقاعدة بيانات "وَهَج" الجديدة
 const firebaseConfig = {
   apiKey: "AIzaSyAnz5eg_i_nvrQr128ms_PlYldEFdIrIUY",
   authDomain: "wahaj-21a9d.firebaseapp.com",
@@ -16,12 +15,10 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// حالة التطبيق
 window.cart = JSON.parse(localStorage.getItem('wahaj_cart')) || [];
 window.products = [];
 window.checkoutStep = 1;
 
-// جلب المنتجات من قاعدة البيانات
 async function fetchProducts() {
     try {
         const q = query(collection(db, "products"), orderBy("timestamp", "desc"));
@@ -31,10 +28,12 @@ async function fetchProducts() {
     } catch(e) { window.toast('حدث خطأ في جلب الشموع', 'error'); }
 }
 
-// رسم المنتجات في الصفحة
 function renderProducts() {
     const grid = document.getElementById('products-grid');
-    if(!window.products.length) { grid.innerHTML = '<div class="col-span-full text-center text-gray-400 py-10 font-bold">لا توجد منتجات حالياً</div>'; return; }
+    if(!window.products.length) { 
+        grid.innerHTML = '<div class="col-span-full text-center py-20"><p class="text-gray-400 font-bold text-lg">لم يتم إضافة شموع بعد. أضف أول شمعة من لوحة التحكم ✨</p></div>'; 
+        return; 
+    }
     
     grid.innerHTML = window.products.map(p => {
         const hasSale = p.oldPrice && Number(p.oldPrice) > Number(p.price);
@@ -60,8 +59,6 @@ function renderProducts() {
         </div>`;
     }).join('');
 }
-
-// === منطق السلة (Cart Logic) ===
 
 window.addToCart = (id) => {
     const prod = window.products.find(x => x.id === id);
@@ -100,7 +97,6 @@ window.renderCartDrawer = () => {
             <div class="flex-1 flex flex-col justify-between">
                 <h4 class="font-bold text-sm text-gray-800 pr-5">${item.name}</h4>
                 <p class="font-black text-[#8B7355]">${item.price * item.qty} ج.م</p>
-                
                 <div class="flex items-center gap-3 bg-gray-50 w-fit rounded-lg border border-gray-200 p-1">
                     <button onclick="updateQty(${idx}, -1)" class="w-6 h-6 flex items-center justify-center text-[#8B7355] font-bold hover:bg-gray-200 rounded">-</button>
                     <span class="text-sm font-bold w-4 text-center">${item.qty}</span>
@@ -211,6 +207,6 @@ window.toast = (msg, type = 'success') => {
     }, 3000);
 };
 
-// تهيئة
+// تشغيل جلب الشموع عند تحميل الصفحة
 fetchProducts();
 updateBadge();
