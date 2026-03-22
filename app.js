@@ -189,7 +189,7 @@ window.handleCheckout = async () => {
 
         window.cart = []; saveCart(); updateBadge(); window.toggleCart();
         window.toast('تم تأكيد طلبك بنجاح!', 'success');
-        setTimeout(() => { window.open(`https://wa.me/201020468021?text=${encodeURIComponent(msg)}`, '_blank'); btn.disabled = false; btn.innerText = 'تأكيد الطلب ✅'; }, 1500);
+        setTimeout(() => { window.open(`https://wa.me/201101151118?text=${encodeURIComponent(msg)}`, '_blank'); btn.disabled = false; btn.innerText = 'تأكيد الطلب ✅'; }, 1500);
     } catch(e) { window.toast('حدث خطأ، حاول مرة أخرى', 'error'); btn.disabled = false; btn.innerText = 'تأكيد الطلب ✅'; }
 };
 
