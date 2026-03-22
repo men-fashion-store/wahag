@@ -134,7 +134,6 @@ function renderProductGrid(containerId, items) {
     }).join('');
 }
 
-// --- تفاصيل المنتج (بشكل موسع مع معرض للصور) ---
 window.openProductDetails = (id) => {
     const p = window.products.find(x => x.id === id);
     window.currentProduct = p;
@@ -282,6 +281,19 @@ function updateWishlistUI() {
     if(!document.getElementById('view-wishlist').classList.contains('hidden')) renderWishlistPage();
 }
 
+// دالة إلغاء الطلب من قِبل العميل
+window.cancelUserOrder = async (orderId) => {
+    if(confirm('هل أنت متأكد من إلغاء هذا الطلب؟ (لا يمكن التراجع)')) {
+        try {
+            await updateDoc(doc(db, "orders", orderId), { status: 'cancelled' });
+            window.toast('تم إلغاء الطلب بنجاح', 'success');
+            loadUserOrders(); // تحديث الواجهة
+        } catch(e) {
+            window.toast('حدث خطأ أثناء الإلغاء', 'error');
+        }
+    }
+};
+
 async function loadUserOrders() {
     if(!window.currentUser) return;
     const q = query(collection(db, "orders"), orderBy("timestamp", "desc"));
@@ -291,12 +303,22 @@ async function loadUserOrders() {
     const container = document.getElementById('user-orders-list');
     if(!myOrders.length) { container.innerHTML = '<p class="text-center text-gray-400 font-bold py-10">لم تقم بأي طلبات بعد</p>'; return; }
     
-    const statusLang = { 'pending': '⏳ قيد المراجعة', 'confirmed': '✅ تم التأكيد', 'delivered': '📦 تم التسليم' };
+    const statusLang = { 'pending': '⏳ قيد المراجعة', 'confirmed': '✅ تم التأكيد (تجهيز)', 'delivered': '📦 تم التسليم', 'cancelled': '❌ ملغي' };
+    
     container.innerHTML = myOrders.map(o => `
         <div class="bg-white p-4 rounded-xl border border-[#FAF8F5] shadow-sm mb-3">
-            <div class="flex justify-between border-b pb-2 mb-2"><span class="font-bold">#${o.id.slice(0,6)}</span><span class="text-xs font-bold text-[#8B7355] bg-[#FAF8F5] px-2 py-1 rounded">${statusLang[o.status]||'معلق'}</span></div>
+            <div class="flex justify-between items-center border-b pb-2 mb-2">
+                <span class="font-bold">#${o.id.slice(0,6)}</span>
+                <span class="text-xs font-bold ${o.status === 'cancelled' ? 'text-red-500' : 'text-[#8B7355]'} bg-[#FAF8F5] px-2 py-1 rounded">${statusLang[o.status]||'معلق'}</span>
+            </div>
             <div class="text-sm text-gray-600">${o.items.map(i=>`<p>- ${i.name} (x${i.qty})</p>`).join('')}</div>
-            <div class="flex justify-between items-center mt-3 pt-2 border-t"><span class="text-xs text-gray-400">${new Date(o.timestamp).toLocaleDateString('ar-EG')}</span><span class="font-black text-[#8B7355]">${o.total} ج.م</span></div>
+            <div class="flex justify-between items-center mt-3 pt-2 border-t">
+                <div class="flex flex-col gap-1">
+                    <span class="text-xs text-gray-400">${new Date(o.timestamp).toLocaleDateString('ar-EG')}</span>
+                    ${o.status === 'pending' ? `<button onclick="window.cancelUserOrder('${o.id}')" class="text-[10px] font-bold text-red-500 bg-red-50 px-2 py-1 rounded w-fit">إلغاء الطلب</button>` : ''}
+                </div>
+                <span class="font-black text-[#8B7355]">${o.total} ج.م</span>
+            </div>
         </div>
     `).join('');
 }
