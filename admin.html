@@ -49,7 +49,14 @@
 
         <div id="view-orders" class="view-sec hidden">
             <h2 class="text-xl font-black text-[#8B7355] mb-4">الطلبات 📦</h2>
-            <div id="orders-list" class="space-y-3"></div>
+            
+            <div class="flex gap-2 mb-4 bg-white p-1 rounded-xl shadow-sm border border-gray-100">
+                <button onclick="switchOrderTab('active')" id="otab-active" class="flex-1 py-2 bg-[#8B7355] text-white rounded-lg font-bold text-xs transition">النشطة</button>
+                <button onclick="switchOrderTab('archive')" id="otab-archive" class="flex-1 py-2 bg-transparent text-gray-500 rounded-lg font-bold text-xs transition">الأرشيف</button>
+            </div>
+
+            <div id="active-orders-list" class="space-y-3"></div>
+            <div id="archive-orders-list" class="space-y-3 hidden"></div>
         </div>
 
         <div id="view-products" class="view-sec hidden">
@@ -66,7 +73,7 @@
                     
                     <div class="border border-dashed border-[#8B7355] bg-orange-50/30 p-4 rounded-xl text-center cursor-pointer" onclick="document.getElementById('p-img').click()">
                         <input type="file" id="p-img" multiple hidden onchange="window.handleImg(this)">
-                        <span class="text-[#8B7355] font-bold text-xs">اضغط لاختيار صور (يمكنك تحديد أكثر من صورة) 📷</span>
+                        <span class="text-[#8B7355] font-bold text-xs">اضغط لاختيار صور (يمكن تحديد أكثر من صورة) 📷</span>
                     </div>
                     <div id="preview-area" class="flex flex-wrap gap-2 mt-2 hidden"></div>
                     
@@ -132,6 +139,23 @@
             window.scrollTo(0,0);
         };
 
+        window.switchOrderTab = (tab) => {
+            const activeBtn = document.getElementById('otab-active');
+            const archiveBtn = document.getElementById('otab-archive');
+            const activeList = document.getElementById('active-orders-list');
+            const archiveList = document.getElementById('archive-orders-list');
+
+            if(tab === 'active') {
+                activeList.classList.remove('hidden'); archiveList.classList.add('hidden');
+                activeBtn.className = 'flex-1 py-2 bg-[#8B7355] text-white rounded-lg font-bold text-xs transition';
+                archiveBtn.className = 'flex-1 py-2 bg-transparent text-gray-500 rounded-lg font-bold text-xs transition';
+            } else {
+                archiveList.classList.remove('hidden'); activeList.classList.add('hidden');
+                archiveBtn.className = 'flex-1 py-2 bg-[#8B7355] text-white rounded-lg font-bold text-xs transition';
+                activeBtn.className = 'flex-1 py-2 bg-transparent text-gray-500 rounded-lg font-bold text-xs transition';
+            }
+        };
+
         const compress = f => new Promise(res=>{const r=new FileReader();r.readAsDataURL(f);r.onload=e=>{const i=new Image();i.src=e.target.result;i.onload=()=>{const c=document.createElement('canvas');const s=600/i.width;c.width=600;c.height=i.height*s;c.getContext('2d').drawImage(i,0,0,c.width,c.height);res(c.toDataURL('image/jpeg',0.7));}}});
 
         window.tempImages = [];
@@ -164,31 +188,43 @@
             }
         });
 
+        // جلب الطلبات وتقسيمها
         onSnapshot(query(collection(db, "orders"), orderBy("timestamp", "desc")), snap => {
             let totalSales=0, completedCount=0, expectedDeposit=0;
-            const list = document.getElementById('orders-list');
-            list.innerHTML = snap.docs.map(d => {
+            let activeHTML = '', archiveHTML = '';
+            
+            snap.docs.forEach(d => {
                 const o = d.data();
                 if(o.status === 'delivered') { totalSales += o.total; completedCount++; }
                 if(o.status === 'pending' || o.status === 'confirmed') expectedDeposit += (o.deposit || 0);
-                const statusColors = {'pending':'bg-yellow-100 text-yellow-700','confirmed':'bg-blue-100 text-blue-700','delivered':'bg-green-100 text-green-700'};
-                return `
+                
+                const statusColors = {'pending':'bg-yellow-100 text-yellow-700','confirmed':'bg-blue-100 text-blue-700','delivered':'bg-green-100 text-green-700', 'cancelled':'bg-red-100 text-red-700'};
+                
+                const card = `
                 <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 relative">
                     <div class="flex justify-between border-b border-gray-50 pb-2 mb-2">
                         <div><p class="font-bold text-sm">${o.customer?.name||'عميل'}</p><p class="text-[10px] text-gray-500 font-bold">${o.customer?.phone} | ${o.customer?.gov}</p></div>
-                        <div class="text-left"><p class="font-black text-[#8B7355] text-lg">${o.total} ج.م</p><p class="text-[10px] text-red-500 font-bold">مقدم: ${o.deposit||0} ج.م</p></div>
+                        <div class="text-left"><p class="font-black text-[#8B7355] text-lg">${o.total} ج.م</p><p class="text-[10px] ${o.status === 'cancelled' ? 'text-red-500' : 'text-orange-500'} font-bold">مقدم: ${o.deposit||0} ج.م</p></div>
                     </div>
                     <div class="text-[11px] bg-[#FAF8F5] p-2 rounded mb-3 font-bold text-gray-700">${o.items.map(i=>`• ${i.name} (x${i.qty})`).join('<br>')}</div>
                     <div class="flex gap-2">
                         <select onchange="window.updOrder('${d.id}', this.value)" class="flex-1 p-1 border outline-none rounded font-bold text-xs ${statusColors[o.status||'pending']}">
                             <option value="pending" ${o.status==='pending'?'selected':''}>⏳ منتظر المقدم</option>
                             <option value="confirmed" ${o.status==='confirmed'?'selected':''}>⚙️ تجهيز (دفع)</option>
-                            <option value="delivered" ${o.status==='delivered'?'selected':''}>✅ مكتمل</option>
+                            <option value="delivered" ${o.status==='delivered'?'selected':''}>✅ مكتمل (نقل للأرشيف)</option>
+                            <option value="cancelled" ${o.status==='cancelled'?'selected':''}>❌ ملغي (نقل للأرشيف)</option>
                         </select>
                         <button onclick="window.delDoc('orders','${d.id}')" class="bg-red-50 text-red-500 px-2 rounded font-bold text-xs">حذف</button>
                     </div>
                 </div>`;
-            }).join('') || '<p class="text-center text-sm py-10">لا توجد طلبات</p>';
+
+                if(o.status === 'delivered' || o.status === 'cancelled') archiveHTML += card;
+                else activeHTML += card;
+            });
+
+            document.getElementById('active-orders-list').innerHTML = activeHTML || '<p class="text-center text-sm py-10">لا توجد طلبات نشطة</p>';
+            document.getElementById('archive-orders-list').innerHTML = archiveHTML || '<p class="text-center text-sm py-10 text-gray-400">الأرشيف فارغ</p>';
+
             document.getElementById('stat-sales').innerText = totalSales + ' ج.م';
             document.getElementById('stat-orders').innerText = completedCount;
             document.getElementById('stat-deposit').innerText = expectedDeposit + ' ج.م';
