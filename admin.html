@@ -17,6 +17,7 @@
 
     <div id="admin-login" class="fixed inset-0 bg-[#FAF8F5] z-[200] flex items-center justify-center p-4">
         <div class="text-center w-full max-w-sm bg-white p-8 rounded-3xl shadow-lg border border-gray-100">
+            <img src="./وهج.png" class="w-20 h-20 mx-auto rounded-full mb-4 shadow-sm border border-gray-200 object-cover">
             <h2 class="text-3xl font-black text-[#8B7355] mb-6">إدارة وَهَج</h2>
             <input type="password" id="admin-password" class="w-full p-4 rounded-xl border border-gray-200 focus:border-[#8B7355] text-center text-xl tracking-widest mb-4 outline-none bg-[#FAF8F5]" placeholder="كلمة المرور">
             <button onclick="login()" class="w-full py-4 bg-[#8B7355] text-white font-bold rounded-xl hover:bg-[#6A563D]">دخول</button>
@@ -25,6 +26,7 @@
 
     <header class="bg-white p-4 shadow-sm flex justify-between items-center z-10 border-b border-gray-100">
         <div class="flex items-center gap-2">
+            <img src="./وهج.png" class="w-8 h-8 rounded-full border border-gray-200 object-cover">
             <span class="text-2xl font-black text-[#8B7355]">وَهَج</span>
         </div>
         <div class="flex gap-2">
@@ -41,7 +43,7 @@
                 <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 text-center"><p class="text-gray-400 font-bold text-xs mb-1">المبيعات</p><h3 id="stat-sales" class="text-lg font-black text-[#8B7355]">0 ج.م</h3></div>
                 <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 text-center"><p class="text-gray-400 font-bold text-xs mb-1">الطلبات المكتملة</p><h3 id="stat-orders" class="text-lg font-black text-[#8B7355]">0</h3></div>
                 <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 text-center"><p class="text-gray-400 font-bold text-xs mb-1">العملاء</p><h3 id="stat-users" class="text-lg font-black text-[#8B7355]">0</h3></div>
-                <div class="bg-white p-4 rounded-2xl shadow-sm border border-orange-100 bg-orange-50/50 text-center"><p class="text-orange-800 font-bold text-[10px] mb-1">مقدم فودافون متوقع</p><h3 id="stat-deposit" class="text-lg font-black text-orange-600">0 ج.م</h3></div>
+                <div class="bg-white p-4 rounded-2xl shadow-sm border border-orange-100 bg-orange-50/50 text-center"><p class="text-orange-800 font-bold text-[10px] mb-1">مقدم متوقع</p><h3 id="stat-deposit" class="text-lg font-black text-orange-600">0 ج.م</h3></div>
             </div>
         </div>
 
@@ -57,15 +59,18 @@
                     <input id="p-name" class="w-full p-2 text-sm border rounded-lg outline-none bg-[#FAF8F5]" placeholder="الاسم">
                     <div class="flex gap-2">
                         <input id="p-price" type="number" class="w-full p-2 text-sm border rounded-lg outline-none bg-[#FAF8F5]" placeholder="السعر">
-                        <input id="p-old-price" type="number" class="w-full p-2 text-sm border rounded-lg outline-none bg-red-50 text-red-500 placeholder-red-300" placeholder="سعر قديم للخصم">
+                        <input id="p-old-price" type="number" class="w-full p-2 text-sm border rounded-lg outline-none bg-red-50 text-red-500 placeholder-red-300" placeholder="سعر قديم">
                     </div>
                     <div class="flex items-center gap-2"><input type="checkbox" id="p-best" class="w-4 h-4"><label class="font-bold text-xs text-gray-600">الأكثر مبيعاً؟</label></div>
-                    <textarea id="p-desc" class="w-full p-2 text-sm border rounded-lg outline-none h-16 bg-[#FAF8F5]" placeholder="الوصف"></textarea>
+                    <textarea id="p-desc" class="w-full p-2 text-sm border rounded-lg outline-none h-16 bg-[#FAF8F5]" placeholder="الوصف التفصيلي"></textarea>
+                    
                     <div class="border border-dashed border-[#8B7355] bg-orange-50/30 p-4 rounded-xl text-center cursor-pointer" onclick="document.getElementById('p-img').click()">
-                        <input type="file" id="p-img" hidden>
-                        <span class="text-[#8B7355] font-bold text-xs">اضغط لرفع صورة 📷</span>
+                        <input type="file" id="p-img" multiple hidden onchange="window.handleImg(this)">
+                        <span class="text-[#8B7355] font-bold text-xs">اضغط لاختيار صور (يمكنك تحديد أكثر من صورة) 📷</span>
                     </div>
-                    <button onclick="addProduct()" id="btn-add" class="w-full py-3 bg-[#8B7355] text-white font-bold rounded-xl text-sm">نشر الشمعة</button>
+                    <div id="preview-area" class="flex flex-wrap gap-2 mt-2 hidden"></div>
+                    
+                    <button onclick="addProduct()" id="btn-add" class="w-full py-3 bg-[#8B7355] text-white font-bold rounded-xl text-sm mt-2">نشر الشمعة</button>
                 </div>
             </div>
             <h3 class="font-bold mb-3 text-[#8B7355] text-sm">الشموع الحالية</h3>
@@ -86,7 +91,7 @@
             <h2 class="text-xl font-black text-[#8B7355] mb-4">المظهر العام 🎨</h2>
             
             <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-6">
-                <h3 class="font-bold text-sm text-gray-700 mb-2">الخلفية الرئيسية للمتجر (رمضان/عيد/إلخ)</h3>
+                <h3 class="font-bold text-sm text-gray-700 mb-2">الخلفية الرئيسية للمتجر</h3>
                 <img id="current-hero-preview" class="w-full h-32 object-cover rounded-xl border border-gray-200 mb-3" src="https://images.unsplash.com/photo-1603006905003-be475563bc59?auto=format&fit=crop&q=80">
                 <input type="file" id="hero-img" class="w-full text-xs mb-2 p-2 border border-dashed rounded-lg bg-gray-50">
                 <button onclick="updateHeroImage()" class="w-full py-2 bg-[#8B7355] text-white font-bold rounded-lg text-sm">حفظ الخلفية الجديدة</button>
@@ -129,7 +134,20 @@
 
         const compress = f => new Promise(res=>{const r=new FileReader();r.readAsDataURL(f);r.onload=e=>{const i=new Image();i.src=e.target.result;i.onload=()=>{const c=document.createElement('canvas');const s=600/i.width;c.width=600;c.height=i.height*s;c.getContext('2d').drawImage(i,0,0,c.width,c.height);res(c.toDataURL('image/jpeg',0.7));}}});
 
-        // تغيير الخلفية
+        window.tempImages = [];
+        window.handleImg = async (inp) => {
+            if(!inp.files || inp.files.length === 0) return;
+            const preview = document.getElementById('preview-area');
+            preview.innerHTML = '<p class="text-xs text-center w-full text-[#8B7355]">جاري الضغط...</p>';
+            preview.classList.remove('hidden');
+            window.tempImages = [];
+            for (let file of inp.files) {
+                const b64 = await compress(file);
+                window.tempImages.push(b64);
+            }
+            preview.innerHTML = window.tempImages.map(src => `<img src="${src}" class="w-16 h-16 object-cover rounded-lg border border-gray-200">`).join('');
+        };
+
         window.updateHeroImage = async () => {
             const f = document.getElementById('hero-img').files[0];
             if(!f) return alert('برجاء اختيار صورة');
@@ -146,18 +164,14 @@
             }
         });
 
-        // الإحصائيات والطلبات
         onSnapshot(query(collection(db, "orders"), orderBy("timestamp", "desc")), snap => {
             let totalSales=0, completedCount=0, expectedDeposit=0;
             const list = document.getElementById('orders-list');
-            
             list.innerHTML = snap.docs.map(d => {
                 const o = d.data();
                 if(o.status === 'delivered') { totalSales += o.total; completedCount++; }
                 if(o.status === 'pending' || o.status === 'confirmed') expectedDeposit += (o.deposit || 0);
-
                 const statusColors = {'pending':'bg-yellow-100 text-yellow-700','confirmed':'bg-blue-100 text-blue-700','delivered':'bg-green-100 text-green-700'};
-                
                 return `
                 <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 relative">
                     <div class="flex justify-between border-b border-gray-50 pb-2 mb-2">
@@ -175,13 +189,11 @@
                     </div>
                 </div>`;
             }).join('') || '<p class="text-center text-sm py-10">لا توجد طلبات</p>';
-
             document.getElementById('stat-sales').innerText = totalSales + ' ج.م';
             document.getElementById('stat-orders').innerText = completedCount;
             document.getElementById('stat-deposit').innerText = expectedDeposit + ' ج.م';
         });
 
-        // العملاء
         onSnapshot(collection(db, "users"), snap => {
             document.getElementById('stat-users').innerText = snap.size;
             document.getElementById('users-table').innerHTML = snap.docs.map(d=>{
@@ -189,13 +201,11 @@
             }).join('');
         });
         
-        // المنتجات
         window.addProduct = async () => {
-            const n=document.getElementById('p-name').value, p=document.getElementById('p-price').value, o=document.getElementById('p-old-price').value, d=document.getElementById('p-desc').value, b=document.getElementById('p-best').checked, img=document.getElementById('p-img').files[0];
-            if(!n || !p || !img) return alert('أكمل البيانات');
+            const n=document.getElementById('p-name').value, p=document.getElementById('p-price').value, o=document.getElementById('p-old-price').value, d=document.getElementById('p-desc').value, b=document.getElementById('p-best').checked;
+            if(!n || !p || window.tempImages.length === 0) return alert('تأكد من كتابة الاسم والسعر ورفع صورة واحدة على الأقل');
             document.getElementById('btn-add').innerText='جاري...';
-            const base64 = await compress(img);
-            await addDoc(collection(db, "products"), {name:n, price:Number(p), oldPrice:o?Number(o):null, desc:d, isBestSeller:b, images:[base64], timestamp:Date.now()});
+            await addDoc(collection(db, "products"), {name:n, price:Number(p), oldPrice:o?Number(o):null, desc:d, isBestSeller:b, images:window.tempImages, timestamp:Date.now()});
             alert('تم نشر الشمعة'); location.reload();
         };
 
@@ -205,7 +215,6 @@
             }).join('');
         });
 
-        // السليدر
         window.addBanner = async () => { const f=document.getElementById('banner-img').files[0]; if(!f) return; const b=await compress(f); await addDoc(collection(db,"banners"),{image:b,timestamp:Date.now()}); alert('تم الرفع'); };
         onSnapshot(collection(db, "banners"), snap => { document.getElementById('banners-list').innerHTML = snap.docs.map(d=>`<div class="relative"><img src="${d.data().image}" class="w-full h-16 object-cover rounded-lg border border-gray-200"><button onclick="window.delDoc('banners','${d.id}')" class="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 text-[10px]">✕</button></div>`).join(''); });
 
