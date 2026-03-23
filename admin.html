@@ -61,9 +61,16 @@
 
         <div id="view-products" class="view-sec hidden">
             <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-6">
-                <h3 class="font-bold mb-3 text-[#8B7355] text-sm">➕ شمعة جديدة</h3>
+                <h3 class="font-bold mb-3 text-[#8B7355] text-sm">➕ منتج جديد</h3>
                 <div class="space-y-3">
                     <input id="p-name" class="w-full p-2 text-sm border rounded-lg outline-none bg-[#FAF8F5]" placeholder="الاسم">
+                    
+                    <select id="p-category" class="w-full p-2 text-sm border rounded-lg outline-none bg-[#FAF8F5] text-gray-600 font-bold">
+                        <option value="candles">شموع أساسية</option>
+                        <option value="occasions">المناسبات</option>
+                        <option value="others">أشياء أخرى قد تعجبك</option>
+                    </select>
+
                     <div class="flex gap-2">
                         <input id="p-price" type="number" class="w-full p-2 text-sm border rounded-lg outline-none bg-[#FAF8F5]" placeholder="السعر">
                         <input id="p-old-price" type="number" class="w-full p-2 text-sm border rounded-lg outline-none bg-red-50 text-red-500 placeholder-red-300" placeholder="سعر قديم">
@@ -77,18 +84,18 @@
                     </div>
                     <div id="preview-area" class="flex flex-wrap gap-2 mt-2 hidden"></div>
                     
-                    <button onclick="addProduct()" id="btn-add" class="w-full py-3 bg-[#8B7355] text-white font-bold rounded-xl text-sm mt-2">نشر الشمعة</button>
+                    <button onclick="addProduct()" id="btn-add" class="w-full py-3 bg-[#8B7355] text-white font-bold rounded-xl text-sm mt-2">نشر المنتج</button>
                 </div>
             </div>
-            <h3 class="font-bold mb-3 text-[#8B7355] text-sm">الشموع الحالية</h3>
+            <h3 class="font-bold mb-3 text-[#8B7355] text-sm">المنتجات الحالية</h3>
             <div id="products-list" class="grid grid-cols-2 gap-3"></div>
         </div>
 
         <div id="view-users" class="view-sec hidden">
             <h2 class="text-xl font-black text-[#8B7355] mb-4">العملاء 👥</h2>
             <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                <table class="w-full text-right text-xs">
-                    <thead class="bg-gray-50 border-b font-bold text-gray-500"><tr><th class="p-3">الاسم</th><th class="p-3">الموبايل</th><th class="p-3">محافظة</th></tr></thead>
+                <table class="w-full text-right text-[10px] md:text-xs">
+                    <thead class="bg-gray-50 border-b font-bold text-gray-500"><tr><th class="p-2">الاسم</th><th class="p-2">بيانات</th><th class="p-2 text-center">إجراء</th></tr></thead>
                     <tbody id="users-table"></tbody>
                 </table>
             </div>
@@ -116,7 +123,7 @@
     <nav class="fixed bottom-0 w-full bg-white border-t border-gray-100 flex justify-around items-center py-2 pb-4 shadow-[0_-5px_15px_rgba(0,0,0,0.05)] z-40 rounded-t-2xl">
         <button onclick="switchView('stats')" id="nav-stats" class="nav-item active flex flex-col items-center gap-1 w-16"><span class="text-2xl">📊</span><span class="text-[10px] font-bold">إحصاءات</span></button>
         <button onclick="switchView('orders')" id="nav-orders" class="nav-item flex flex-col items-center gap-1 w-16"><span class="text-2xl">📦</span><span class="text-[10px] font-bold">طلبات</span></button>
-        <button onclick="switchView('products')" id="nav-products" class="nav-item flex flex-col items-center gap-1 w-16"><span class="text-2xl">🕯️</span><span class="text-[10px] font-bold">شموع</span></button>
+        <button onclick="switchView('products')" id="nav-products" class="nav-item flex flex-col items-center gap-1 w-16"><span class="text-2xl">🕯️</span><span class="text-[10px] font-bold">منتجات</span></button>
         <button onclick="switchView('users')" id="nav-users" class="nav-item flex flex-col items-center gap-1 w-16"><span class="text-2xl">👥</span><span class="text-[10px] font-bold">عملاء</span></button>
         <button onclick="switchView('banners')" id="nav-banners" class="nav-item flex flex-col items-center gap-1 w-16"><span class="text-2xl">🎨</span><span class="text-[10px] font-bold">المظهر</span></button>
     </nav>
@@ -188,7 +195,7 @@
             }
         });
 
-        // جلب الطلبات وتقسيمها
+        // جلب الطلبات
         onSnapshot(query(collection(db, "orders"), orderBy("timestamp", "desc")), snap => {
             let totalSales=0, completedCount=0, expectedDeposit=0;
             let activeHTML = '', archiveHTML = '';
@@ -203,7 +210,7 @@
                 const card = `
                 <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 relative">
                     <div class="flex justify-between border-b border-gray-50 pb-2 mb-2">
-                        <div><p class="font-bold text-sm">${o.customer?.name||'عميل'}</p><p class="text-[10px] text-gray-500 font-bold">${o.customer?.phone} | ${o.customer?.gov}</p></div>
+                        <div><p class="font-bold text-sm">${o.customer?.name||'عميل'}</p><p class="text-[10px] text-gray-500 font-bold">${o.customer?.phone}</p></div>
                         <div class="text-left"><p class="font-black text-[#8B7355] text-lg">${o.total} ج.م</p><p class="text-[10px] ${o.status === 'cancelled' ? 'text-red-500' : 'text-orange-500'} font-bold">مقدم: ${o.deposit||0} ج.م</p></div>
                     </div>
                     <div class="text-[11px] bg-[#FAF8F5] p-2 rounded mb-3 font-bold text-gray-700">${o.items.map(i=>`• ${i.name} (x${i.qty})`).join('<br>')}</div>
@@ -211,8 +218,8 @@
                         <select onchange="window.updOrder('${d.id}', this.value)" class="flex-1 p-1 border outline-none rounded font-bold text-xs ${statusColors[o.status||'pending']}">
                             <option value="pending" ${o.status==='pending'?'selected':''}>⏳ منتظر المقدم</option>
                             <option value="confirmed" ${o.status==='confirmed'?'selected':''}>⚙️ تجهيز (دفع)</option>
-                            <option value="delivered" ${o.status==='delivered'?'selected':''}>✅ مكتمل (نقل للأرشيف)</option>
-                            <option value="cancelled" ${o.status==='cancelled'?'selected':''}>❌ ملغي (نقل للأرشيف)</option>
+                            <option value="delivered" ${o.status==='delivered'?'selected':''}>✅ مكتمل (أرشيف)</option>
+                            <option value="cancelled" ${o.status==='cancelled'?'selected':''}>❌ ملغي (أرشيف)</option>
                         </select>
                         <button onclick="window.delDoc('orders','${d.id}')" class="bg-red-50 text-red-500 px-2 rounded font-bold text-xs">حذف</button>
                     </div>
@@ -230,19 +237,42 @@
             document.getElementById('stat-deposit').innerText = expectedDeposit + ' ج.م';
         });
 
+        // المستخدمين (مع زر حذف ونجمة)
+        window.toggleUserFav = async (uid, currentStatus) => { await updateDoc(doc(db, "users", uid), { isFavorite: !currentStatus }); };
+        window.deleteUser = async (uid) => { if(confirm('حذف العميل نهائياً من قاعدة البيانات؟')) await deleteDoc(doc(db, "users", uid)); };
+
         onSnapshot(collection(db, "users"), snap => {
             document.getElementById('stat-users').innerText = snap.size;
             document.getElementById('users-table').innerHTML = snap.docs.map(d=>{
-                const u=d.data(); return `<tr class="border-b"><td class="p-3 font-bold">${u.name}</td><td class="p-3">${u.phone}</td><td class="p-3 text-gray-500">${u.gov||'-'}</td></tr>`;
+                const u=d.data(); 
+                const starColor = u.isFavorite ? 'text-yellow-500' : 'text-gray-300';
+                return `<tr class="border-b">
+                    <td class="p-2 font-bold">${u.name} ${u.isFavorite ? '⭐' : ''}</td>
+                    <td class="p-2 text-[10px] text-gray-600">${u.phone}<br>${u.address?.slice(0,10)}..</td>
+                    <td class="p-2 text-center flex flex-col gap-1 items-center justify-center">
+                        <button onclick="window.toggleUserFav('${d.id}', ${!!u.isFavorite})" class="w-6 h-6 rounded bg-gray-50 flex items-center justify-center text-xs ${starColor}">★</button>
+                        <button onclick="window.deleteUser('${d.id}')" class="w-6 h-6 rounded bg-red-50 flex items-center justify-center text-red-500 text-xs">🗑️</button>
+                    </td>
+                </tr>`;
             }).join('');
         });
         
+        // المنتجات
         window.addProduct = async () => {
-            const n=document.getElementById('p-name').value, p=document.getElementById('p-price').value, o=document.getElementById('p-old-price').value, d=document.getElementById('p-desc').value, b=document.getElementById('p-best').checked;
+            const n=document.getElementById('p-name').value, 
+                  p=document.getElementById('p-price').value, 
+                  o=document.getElementById('p-old-price').value, 
+                  d=document.getElementById('p-desc').value, 
+                  b=document.getElementById('p-best').checked,
+                  cat=document.getElementById('p-category').value;
+                  
             if(!n || !p || window.tempImages.length === 0) return alert('تأكد من كتابة الاسم والسعر ورفع صورة واحدة على الأقل');
             document.getElementById('btn-add').innerText='جاري...';
-            await addDoc(collection(db, "products"), {name:n, price:Number(p), oldPrice:o?Number(o):null, desc:d, isBestSeller:b, images:window.tempImages, timestamp:Date.now()});
-            alert('تم نشر الشمعة'); location.reload();
+            await addDoc(collection(db, "products"), {
+                name:n, price:Number(p), oldPrice:o?Number(o):null, desc:d, 
+                isBestSeller:b, category: cat, images:window.tempImages, timestamp:Date.now()
+            });
+            alert('تم نشر المنتج'); location.reload();
         };
 
         onSnapshot(query(collection(db, "products"), orderBy("timestamp", "desc")), snap => {
@@ -251,6 +281,7 @@
             }).join('');
         });
 
+        // السليدر
         window.addBanner = async () => { const f=document.getElementById('banner-img').files[0]; if(!f) return; const b=await compress(f); await addDoc(collection(db,"banners"),{image:b,timestamp:Date.now()}); alert('تم الرفع'); };
         onSnapshot(collection(db, "banners"), snap => { document.getElementById('banners-list').innerHTML = snap.docs.map(d=>`<div class="relative"><img src="${d.data().image}" class="w-full h-16 object-cover rounded-lg border border-gray-200"><button onclick="window.delDoc('banners','${d.id}')" class="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 text-[10px]">✕</button></div>`).join(''); });
 
