@@ -15,6 +15,8 @@
     .hide-scroll::-webkit-scrollbar { display: none; }
     @keyframes slideDown { from { transform: translate(-50%, -100%); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
     .toast-animate { animation: slideDown 0.3s ease-out forwards; }
+    /* تأثير النار للزرار */
+    .fire-glow { filter: drop-shadow(0 0 4px #ff4500); }
   </style>
  </head>
  <body class="min-h-screen text-gray-800 flex flex-col relative overflow-x-hidden">
@@ -48,22 +50,28 @@
            </div>
        </div>
 
-       <div class="px-4 mb-8"><div id="home-slider" class="flex overflow-x-auto snap-x hide-scroll h-48 rounded-2xl shadow-sm gap-2"></div></div>
+       <div class="px-4 mb-6"><div id="home-slider" class="flex overflow-x-auto snap-x hide-scroll h-48 rounded-2xl shadow-sm gap-2 hidden"></div></div>
 
-       <div id="sec-offers" class="mb-8">
-           <div class="flex justify-between items-end px-4 mb-4"><h2 class="text-xl font-bold text-gray-800 border-b-2 border-softPink pb-1">🔥 عروض حصرية</h2></div>
-           <div id="grid-offers" class="flex overflow-x-auto gap-4 px-4 pb-4 hide-scroll snap-x"></div>
+       <div class="px-4 mb-6">
+           <div class="flex justify-between items-center gap-3 overflow-x-auto hide-scroll pb-2 pt-2">
+               
+               <button onclick="filterProducts('all')" id="filter-all" class="filter-btn flex-1 min-w-[80px] py-2.5 rounded-2xl border border-brand bg-brand text-white shadow-md font-bold text-sm transition-all duration-300">الكل</button>
+               
+               <button onclick="filterProducts('best')" id="filter-best" class="filter-btn flex-1 min-w-[120px] py-2.5 rounded-2xl border border-gray-200 bg-white text-gray-500 font-bold text-sm transition-all duration-300 flex items-center justify-center gap-1 relative overflow-hidden group">
+                   الأكثر مبيعاً 
+                   <span class="animate-pulse text-lg fire-glow group-hover:scale-125 transition-transform">🔥</span>
+               </button>
+               
+               <button onclick="filterProducts('offers')" id="filter-offers" class="filter-btn flex-1 min-w-[100px] py-2.5 rounded-2xl border border-gray-200 bg-white text-gray-500 font-bold text-sm transition-all duration-300 relative">
+                   العروض 
+                   <span class="absolute -top-2 -left-2 bg-red-500 text-white text-[9px] px-2 py-0.5 rounded-br-xl rounded-tl-xl shadow-sm animate-bounce tracking-widest font-black" style="transform: rotate(-10deg);">SALE</span>
+               </button>
+               
+           </div>
        </div>
 
-       <div id="sec-best" class="mb-8">
-           <div class="flex justify-between items-end px-4 mb-4"><h2 class="text-xl font-bold text-gray-800 border-b-2 border-accent pb-1">⭐ الأكثر مبيعاً</h2></div>
-           <div id="grid-best" class="flex overflow-x-auto gap-4 px-4 pb-4 hide-scroll snap-x"></div>
-       </div>
-
-       <div class="mb-8">
-           <div class="flex justify-between items-end px-4 mb-4"><h2 class="text-xl font-bold text-gray-800 border-b-2 border-brand pb-1">✨ أحدث الشموع</h2></div>
-           <div id="grid-new" class="grid grid-cols-2 gap-4 px-4"></div>
-       </div>
+       <div id="main-products-grid" class="grid grid-cols-2 gap-4 px-4 pb-8">
+           </div>
    </main>
 
    <main id="view-product-details" class="flex-1 max-w-lg mx-auto w-full hidden">
