@@ -13,7 +13,7 @@ window.products = [];
 window.banners = [];
 window.currentUser = null;
 window.currentProduct = null;
-window.currentFilter = 'all'; // الفلتر الافتراضي
+window.currentFilter = 'all';
 
 onSnapshot(doc(db, "settings", "theme"), (docSnap) => {
     if(docSnap.exists() && docSnap.data().heroImage) {
@@ -27,10 +27,9 @@ onAuthStateChanged(auth, async (user) => {
         const docSnap = await getDoc(doc(db, "users", user.uid));
         if (docSnap.exists()) {
             window.currentUser = docSnap.data();
-            document.getElementById('header-user-name').innerText = window.currentUser.name.split(' ')[0];
             document.getElementById('profile-view-name').innerText = window.currentUser.name;
             document.getElementById('profile-view-phone').innerText = window.currentUser.phone;
-            document.getElementById('profile-view-gov').innerText = window.currentUser.gov || 'غير محدد';
+            document.getElementById('profile-view-address').innerText = window.currentUser.address || 'غير مسجل';
             
             document.getElementById('auth-section').classList.add('hidden');
             document.getElementById('profile-details-section').classList.remove('hidden');
@@ -40,7 +39,6 @@ onAuthStateChanged(auth, async (user) => {
         }
     } else {
         window.currentUser = null;
-        document.getElementById('header-user-name').innerText = 'دخول';
         document.getElementById('auth-section').classList.remove('hidden');
         document.getElementById('profile-details-section').classList.add('hidden');
     }
@@ -51,14 +49,18 @@ window.handleSignup = async (e) => {
     const btn = document.getElementById('btn-signup');
     const name = document.getElementById('signup-name').value;
     const phone = document.getElementById('signup-phone').value;
-    const gov = document.getElementById('signup-gov').value;
+    const address = document.getElementById('signup-address').value;
+    const altPhone = document.getElementById('signup-alt-phone').value;
+    const whatsapp = document.getElementById('signup-whatsapp').value;
     const pass = document.getElementById('signup-pass').value;
     const fakeEmail = `${phone}@wahaj.com`;
 
     btn.disabled = true; btn.innerText = 'جاري الإنشاء...';
     try {
         const cred = await createUserWithEmailAndPassword(auth, fakeEmail, pass);
-        await setDoc(doc(db, "users", cred.user.uid), { name, phone, gov, uid: cred.user.uid, wishlist: [], timestamp: Date.now() });
+        await setDoc(doc(db, "users", cred.user.uid), { 
+            name, phone, address, altPhone, whatsapp, uid: cred.user.uid, wishlist: [], timestamp: Date.now() 
+        });
         window.toast('تم إنشاء الحساب بنجاح ✨');
     } catch(err) { window.toast('الرقم مسجل مسبقاً أو كلمة المرور ضعيفة', 'error'); }
     btn.disabled = false; btn.innerText = 'إنشاء الحساب';
@@ -75,6 +77,7 @@ window.handleLogin = async (e) => {
     try {
         await signInWithEmailAndPassword(auth, fakeEmail, pass);
         window.toast('أهلاً بك مجدداً ✨');
+        window.switchNav('home');
     } catch(err) { window.toast('بيانات الدخول غير صحيحة', 'error'); }
     btn.disabled = false; btn.innerText = 'دخول';
 };
@@ -94,7 +97,6 @@ async function fetchData() {
 }
 
 function renderHome() {
-    // السليدر
     const slider = document.getElementById('home-slider');
     if(window.banners && window.banners.length > 0) {
         slider.innerHTML = window.banners.map(img => `<img src="${img}" class="min-w-full h-full object-cover snap-center rounded-2xl border border-gray-100">`).join('');
@@ -102,16 +104,13 @@ function renderHome() {
     } else {
         if(slider) slider.parentElement.classList.add('hidden');
     }
-
-    // عرض المنتجات بناءً على الفلتر الحالي
     window.filterProducts(window.currentFilter);
 }
 
-// دالة الفلترة (الزراير الذكية)
+// --- نظام الفلترة والتصنيفات ---
 window.filterProducts = (type) => {
     window.currentFilter = type;
     
-    // تغيير ألوان الزراير
     document.querySelectorAll('.filter-btn').forEach(btn => {
         btn.classList.remove('bg-brand', 'text-white', 'border-brand', 'shadow-md');
         btn.classList.add('bg-white', 'text-gray-500', 'border-gray-200');
@@ -123,26 +122,33 @@ window.filterProducts = (type) => {
         activeBtn.classList.add('bg-brand', 'text-white', 'border-brand', 'shadow-md');
     }
 
-    // فلترة الداتا
     let filtered = window.products;
+    
+    // منطق الفلترة الذكي
     if(type === 'best') filtered = window.products.filter(p => p.isBestSeller);
     if(type === 'offers') filtered = window.products.filter(p => p.oldPrice > p.price);
+    if(type === 'mega_sale') {
+        filtered = window.products.filter(p => p.oldPrice && ((p.oldPrice - p.price) / p.oldPrice) >= 0.20); 
+        // 20% خصم أو أكثر يعرض في أقوى الخصومات، لو مفيش يعرض العروض العادية
+        if(filtered.length === 0) filtered = window.products.filter(p => p.oldPrice > p.price);
+    }
+    if(type === 'occasions') filtered = window.products.filter(p => p.category === 'occasions');
+    if(type === 'others') filtered = window.products.filter(p => p.category === 'others');
+    if(type === 'all') filtered = window.products; // لو عايز يخفي الأقسام ويرجع الكل
     
-    // رسم الشموع
     renderProductGrid('main-products-grid', filtered);
 };
 
-// رسم الكروت (بنفس الشكل اللي طلبته بالملي)
 function renderProductGrid(containerId, items) {
     const container = document.getElementById(containerId);
     if(!container) return;
     
     if(items.length === 0) {
         container.className = "flex justify-center items-center px-4 w-full";
-        container.innerHTML = '<div class="py-10 text-center"><p class="text-gray-400 font-bold">لا توجد شموع في هذا القسم حالياً</p></div>';
+        container.innerHTML = '<div class="py-10 text-center"><p class="text-gray-400 font-bold text-sm">لا توجد منتجات في هذا القسم حالياً</p></div>';
         return;
     } else {
-        container.className = "grid grid-cols-2 gap-4 px-4 pb-8"; // ضبط الشبكة
+        container.className = "grid grid-cols-2 gap-4 px-4 pb-8";
     }
     
     container.innerHTML = items.map(p => {
@@ -242,9 +248,6 @@ window.handleCheckout = async () => {
     if(!window.currentUser) { window.toast('يجب تسجيل الدخول أولاً', 'error'); window.toggleCart(); window.switchNav('profile'); return; }
     if(!window.cart.length) return;
 
-    const addressDetails = prompt("برجاء إدخال العنوان بالتفصيل (الشارع، رقم العمارة، الشقة):");
-    if(!addressDetails) return;
-
     const btn = document.getElementById('checkout-btn');
     btn.disabled = true; btn.innerText = 'جاري الإرسال...';
     
@@ -254,11 +257,11 @@ window.handleCheckout = async () => {
     try {
         await addDoc(collection(db, "orders"), {
             items: window.cart, total, deposit, remainder: total - deposit,
-            customer: { uid: window.currentUser.uid, name: window.currentUser.name, phone: window.currentUser.phone, gov: window.currentUser.gov, address: addressDetails },
+            customer: { uid: window.currentUser.uid, name: window.currentUser.name, phone: window.currentUser.phone, address: window.currentUser.address },
             timestamp: Date.now(), status: 'pending'
         });
 
-        let msg = `✨ *طلب جديد من متجر وَهَج* ✨\n\n👤 *الاسم:* ${window.currentUser.name}\n📞 *الموبايل:* ${window.currentUser.phone}\n📍 *العنوان:* ${window.currentUser.gov} - ${addressDetails}\n\n🛍️ *المنتجات:*\n`;
+        let msg = `✨ *طلب جديد من متجر وَهَج* ✨\n\n👤 *الاسم:* ${window.currentUser.name}\n📞 *الموبايل:* ${window.currentUser.phone}\n📍 *العنوان:* ${window.currentUser.address}\n\n🛍️ *المنتجات:*\n`;
         window.cart.forEach(i => { msg += `- ${i.name} (x${i.qty})\n`; });
         msg += `\n💰 *الإجمالي:* ${total} ج.م\n💳 *المقدم المطلوب فودافون كاش (25%):* ${deposit} ج.م\n💵 *الباقي عند الاستلام:* ${total - deposit} ج.م`;
 
@@ -285,15 +288,15 @@ window.switchNav = (viewId) => {
     if(document.getElementById('nav-'+viewId)) document.getElementById('nav-'+viewId).classList.add('text-[#8B7355]');
     
     window.scrollTo(0,0);
-    if(viewId === 'home') renderHome(); // لضمان رسم الفلتر الصحيح
+    if(viewId === 'home') renderHome(); 
     if(viewId === 'wishlist') renderWishlistPage();
 };
 
 window.switchAuthTab = (tab) => {
     document.getElementById('form-login').classList.toggle('hidden', tab !== 'login');
     document.getElementById('form-signup').classList.toggle('hidden', tab !== 'signup');
-    document.getElementById('tab-login').className = tab === 'login' ? 'flex-1 py-3 font-black text-[#8B7355] border-b-2 border-[#8B7355]' : 'flex-1 py-3 font-bold text-gray-400 border-b-2 border-transparent';
-    document.getElementById('tab-signup').className = tab === 'signup' ? 'flex-1 py-3 font-black text-[#8B7355] border-b-2 border-[#8B7355]' : 'flex-1 py-3 font-bold text-gray-400 border-b-2 border-transparent';
+    document.getElementById('tab-login').className = tab === 'login' ? 'flex-1 py-3 font-black text-[#8B7355] border-b-2 border-[#8B7355] transition' : 'flex-1 py-3 font-bold text-gray-400 border-b-2 border-transparent transition';
+    document.getElementById('tab-signup').className = tab === 'signup' ? 'flex-1 py-3 font-black text-[#8B7355] border-b-2 border-[#8B7355] transition' : 'flex-1 py-3 font-bold text-gray-400 border-b-2 border-transparent transition';
 };
 
 window.toggleWishlist = async (id, event) => {
@@ -327,9 +330,7 @@ window.cancelUserOrder = async (orderId) => {
             await updateDoc(doc(db, "orders", orderId), { status: 'cancelled' });
             window.toast('تم إلغاء الطلب بنجاح', 'success');
             loadUserOrders();
-        } catch(e) {
-            window.toast('حدث خطأ أثناء الإلغاء', 'error');
-        }
+        } catch(e) { window.toast('حدث خطأ أثناء الإلغاء', 'error'); }
     }
 };
 
